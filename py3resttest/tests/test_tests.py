@@ -67,42 +67,42 @@ class TestsTest(unittest.TestCase):
     def test_parse_test(self):
         """ Test basic ways of creating test objects from input object structure """
         # Most basic case
-        myinput = {"url": "/ping", "method": "DELETE", "NAME": "foo", "group": "bar",
+        my_input = {"url": "/ping", "method": "DELETE", "NAME": "foo", "group": "bar",
                    "body": "<xml>input</xml>", "headers": {"Accept": "Application/json"}}
-        test = Test.parse_test('', myinput)
-        self.assertEqual(test.url, myinput['url'])
-        self.assertEqual(test.method, myinput['method'])
-        self.assertEqual(test.name, myinput['NAME'])
-        self.assertEqual(test.group, myinput['group'])
-        self.assertEqual(test.body, myinput['body'])
+        test = Test.parse_test('', my_input)
+        self.assertEqual(test.url, my_input['url'])
+        self.assertEqual(test.method, my_input['method'])
+        self.assertEqual(test.name, my_input['NAME'])
+        self.assertEqual(test.group, my_input['group'])
+        self.assertEqual(test.body, my_input['body'])
         # Test headers match
         self.assertFalse(set(test.headers.values()) ^
-                         set(myinput['headers'].values()))
+                         set(my_input['headers'].values()))
 
         # Happy path, only gotcha is that it's a POST, so must accept 200 or
         # 204 response code
-        myinput = {"url": "/ping", "meThod": "POST"}
-        test = Test.parse_test('', myinput)
-        self.assertEqual(test.url, myinput['url'])
-        self.assertEqual(test.method, myinput['meThod'])
+        my_input = {"url": "/ping", "meThod": "POST"}
+        test = Test.parse_test('', my_input)
+        self.assertEqual(test.url, my_input['url'])
+        self.assertEqual(test.method, my_input['meThod'])
         self.assertEqual(test.expected_status, [200, 201, 204])
 
         # Authentication
-        myinput = {"url": "/ping", "method": "GET",
+        my_input = {"url": "/ping", "method": "GET",
                    "auth_username": "foo", "auth_password": "bar"}
-        test = Test.parse_test('', myinput)
-        self.assertEqual('foo', myinput['auth_username'])
-        self.assertEqual('bar', myinput['auth_password'])
+        test = Test.parse_test('', my_input)
+        self.assertEqual('foo', my_input['auth_username'])
+        self.assertEqual('bar', my_input['auth_password'])
         self.assertEqual(test.expected_status, [200])
 
         # Test that headers propagate
-        myinput = {"url": "/ping", "method": "GET",
+        my_input = {"url": "/ping", "method": "GET",
                    "headers": [{"Accept": "application/json"}, {"Accept-Encoding": "gzip"}]}
-        test = Test.parse_test('', myinput)
+        test = Test.parse_test('', my_input)
         expected_headers = {"Accept": "application/json",
                             "Accept-Encoding": "gzip"}
 
-        self.assertEqual(test.url, myinput['url'])
+        self.assertEqual(test.url, my_input['url'])
         self.assertEqual(test.method, 'GET')
         self.assertEqual(test.expected_status, [200])
         self.assertTrue(isinstance(test.headers, dict))
@@ -112,9 +112,9 @@ class TestsTest(unittest.TestCase):
                          set(expected_headers.values()))
 
         # Test expected status propagates and handles conversion to integer
-        myinput = [{"url": "/ping"}, {"name": "cheese"},
+        my_input = [{"url": "/ping"}, {"name": "cheese"},
                    {"expected_status": ["200", 204, "202"]}]
-        test = Test.parse_test('', myinput)
+        test = Test.parse_test('', my_input)
         self.assertEqual(test.name, "cheese")
         self.assertEqual(test.expected_status, [200, 204, 202])
         self.assertFalse(test.is_context_modifier())
