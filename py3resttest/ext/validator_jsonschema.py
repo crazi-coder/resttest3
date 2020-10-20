@@ -1,16 +1,12 @@
 import json
 import traceback
-from sys import version_info
 
 import jsonschema
 import yaml
 
-from contenthandling import ContentHandler
-from parsing import lowercase_keys
-from validators import AbstractValidator, Failure, FAILURE_VALIDATOR_EXCEPTION
-
-PYTHON_MAJOR_VERSION = version_info[0]
-
+from py3resttest.contenthandling import ContentHandler
+from py3resttest.utils import Parser
+from py3resttest.validators import AbstractValidator, Failure, FAILURE_VALIDATOR_EXCEPTION
 
 
 class JsonSchemaValidator(AbstractValidator):
@@ -20,20 +16,16 @@ class JsonSchemaValidator(AbstractValidator):
     def validate(self, body=None, headers=None, context=None):
         schema_text = self.schema.get_content(context=context)
         schema = yaml.safe_load(schema_text)
-        # TODO add caching of parsed schema
 
         try:
-            # TODO try draft3/draft4 iter_errors -
-            # https://python-jsonschema.readthedocs.org/en/latest/validate/#jsonschema.IValidator.iter_errors
-            parsed_body = body
-            if PYTHON_MAJOR_VERSION > 2 and isinstance(body, bytes):
-                parsed_body = str(body, 'utf-8')
-            jsonschema.validate(json.loads(parsed_body), schema)
+            if isinstance(body, bytes):
+                body = body.decode()
+            jsonschema.validate(json.loads(body), schema)
             return True
         except jsonschema.exceptions.ValidationError as ve:
             trace = traceback.format_exc()
             return Failure(message="JSON Schema Validation Failed", details=trace, validator=self,
-                                      failure_type=FAILURE_VALIDATOR_EXCEPTION)
+                           failure_type=FAILURE_VALIDATOR_EXCEPTION)
 
     def get_readable_config(self, context=None):
         return "JSON schema validation"
@@ -41,12 +33,12 @@ class JsonSchemaValidator(AbstractValidator):
     @classmethod
     def parse(cls, config):
         validator = JsonSchemaValidator()
-        config = lowercase_keys(config)
+        config = Parser.lowercase_keys(config)
         if 'schema' not in config:
             raise ValueError(
                 "Cannot create schema validator without a 'schema' configuration element!")
         validator.schema = ContentHandler.parse_content(config[
-                                                                            'schema'])
+                                                            'schema'])
         return validator
 
 

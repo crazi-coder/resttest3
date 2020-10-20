@@ -8,24 +8,6 @@ import traceback
 
 from py3resttest.parsing import flatten_dictionaries, lowercase_keys
 
-"""
-Validator/Extractor logic for utility use
-Defines objects:
-- Extractors that take a text body and context, and return a result from the (text) body
-- Validators (functions) that take a text body and context, and validate the body
-- Several useful implementations for each:
-
-Extractors:
-    - json mini extractor (sudo-jsonpath)
-
-Validators:
-    - TEST validator, config includes and extractor function and test name, applies test to extract results
-        - Uses VALIDATOR_TESTS, for pluggable test functions
-    - comparator validator:
-        - runs named extractor, compares to expected value (can be template or extractor)
-        - uses (pluggable) comparator function for comparison
-
-"""
 
 logger = logging.getLogger('py3resttest.validators')
 

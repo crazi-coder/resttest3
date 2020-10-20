@@ -233,12 +233,12 @@ class TestCase:
         self._test_run_delay = 0
         self._auth_type = AuthType.BASIC
         self._curl_options = None
-        self.__variable_binds_dict = variable_binds
+        self.__variable_binds_dict = variable_binds if variable_binds else {}
         self.__generator_binds_dict = {}
-        self.__extract_binds_dict = extract_binds
+        self.__extract_binds_dict = extract_binds if extract_binds else {}
         self.__validator_list = []
 
-        self.expected_http_status_code_list = [200]
+        self.__expected_http_status_code_list = [200]
         self.__context = Context() if context is None else context
 
         self.templates = {}
@@ -279,6 +279,10 @@ class TestCase:
         return self.__name
 
     @property
+    def group(self):
+        return self.__group
+
+    @property
     def url(self):
         val = self.realize_template("url", self.__context)
         if val is None:
@@ -298,6 +302,16 @@ class TestCase:
             self.__url = url
 
     @property
+    def generator_binds(self):
+        return self.__generator_binds_dict
+
+    @generator_binds.setter
+    def generator_binds(self, value: Dict):
+        binds_dict = flatten_dictionaries(value)
+        __binds_dict = {str(k): str(v) for k, v in binds_dict.items()}
+        self.__generator_binds_dict.update(__binds_dict)
+
+    @property
     def variable_binds(self):
         return self.__variable_binds_dict
 
@@ -306,16 +320,22 @@ class TestCase:
         return self.__extract_binds_dict
 
     @extract_binds.setter
-    def extract_binds(self, bind_dict_list: List):
-        for bind_dict in bind_dict_list:
-            for variable_name, extractor in bind_dict.items():
-                if not isinstance(extractor, dict) or len(extractor) == 0:
-                    raise BindError("Extractors must be defined as maps of extractorType:{configs} with 1 entry")
-                if len(extractor) > 1:
-                    raise BindError("Cannot define multiple extractors for given variable name")
-                for extractor_type, extractor_config in extractor.items():
-                    self.__extract_binds_dict[variable_name] = parse_extractor(extractor_type, extractor_config)
+    def extract_binds(self, bind_dict):
+        bind_dict = flatten_dictionaries(bind_dict)
+        for variable_name, extractor in bind_dict.items():
+            if not isinstance(extractor, dict) or len(extractor) == 0:
+                raise BindError("Extractors must be defined as maps of extractorType:{configs} with 1 entry")
+            if len(extractor) > 1:
+                raise BindError("Cannot define multiple extractors for given variable name")
+            for extractor_type, extractor_config in extractor.items():
+                self.__extract_binds_dict[variable_name] = parse_extractor(extractor_type, extractor_config)
+    @property
+    def expected_http_status_code_list(self):
+        return [int(x) for x in self.__expected_http_status_code_list]
 
+    @expected_http_status_code_list.setter
+    def expected_http_status_code_list(self, value):
+        self.__expected_http_status_code_list = value
     @property
     def validators(self):
         return self.__validator_list
@@ -360,11 +380,8 @@ class TestCase:
                         self.set_template("headers", value.get('template'))
             self.__header_dict.update(config_value)
         else:
-            logger.error("Illegal header type: headers must be a dictionary or list of dictionary keys")
+            raise ValidatorError("Illegal header type: headers must be a dictionary or list of dictionary keys")
 
-    @property
-    def generator_binds(self):
-        return self.__generator_binds_dict
 
     def set_template(self, variable_name, template_string):
         self.templates[variable_name] = string.Template(str(template_string))
@@ -412,7 +429,7 @@ class TestCase:
             elif keyword == TestCaseKeywords.auth_password:
                 self.auth_password = value
             elif keyword == TestCaseKeywords.method:
-                self.__http_method = value
+                self.http_method = value
             elif keyword == TestCaseKeywords.delay:
                 self.__delay = int(value)
             elif keyword == TestCaseKeywords.group:
@@ -441,7 +458,7 @@ class TestCase:
             self.expected_http_status_code_list = expected_status
         else:
             if self.http_method in ["POST", "PUT", "DELETE"]:
-                self.expected_http_status_code_list.extend([201, 204])
+                self.expected_http_status_code_list = [200, 201, 204]
 
         return
 

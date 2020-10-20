@@ -5,7 +5,7 @@ from py3resttest.binding import Context
 
 def count_gen():  # Generator that counts up from 1
     val = 1
-    while (True):
+    while True:
         yield val
         val += 1
 
