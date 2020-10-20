@@ -2,10 +2,10 @@ import json
 
 import jmespath
 
-from py3resttest import validators
+from py3resttest.validators import AbstractExtractor
 
 
-class JMESPathExtractor(validators.AbstractExtractor):
+class JMESPathExtractor(AbstractExtractor):
     """ Extractor that uses JMESPath syntax
         See http://jmespath.org/specification.html for details
     """

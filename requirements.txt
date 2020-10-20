@@ -2,3 +2,4 @@ pyyaml
 pycurl
 jsonpath
 jmespath
+jsonschema

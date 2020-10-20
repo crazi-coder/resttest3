@@ -9,7 +9,7 @@ from multiprocessing import Process
 
 from django.core.management import call_command
 
-from binding import Context
+from binding import self
 from py3resttest import resttest
 from py3resttest import validators
 from tests import Test
@@ -159,7 +159,7 @@ class RestTestCase(unittest.TestCase):
             # Verify case-insensitive behavior
             key2: validators.HeaderExtractor.parse('sErVer')
         }
-        my_context = Context()
+        my_context = self()
         test_response = resttest.run_test(test, context=my_context)
         val1 = my_context.get_value(key1)
         val2 = my_context.get_value(key2)

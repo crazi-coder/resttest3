@@ -60,8 +60,7 @@ def generator_basic_ids():
 
 def generator_random_int32():
     """ Random integer generator for up to 32-bit signed ints """
-    rand = random.Random()
-    while (True):
+    while True:
         yield random.randint(0, INT32_MAX_VALUE)
 
 
@@ -75,11 +74,9 @@ def factory_generate_text(legal_characters=string.ascii_letters, min_length=8, m
     def generate_text():
         local_min_len = min_length
         local_max_len = max_length
-        rand = random.Random()
         while True:
             length = random.randint(local_min_len, local_max_len)
-            array = [random.choice(legal_characters)
-                     for x in range(0, length)]
+            array = [random.choice(legal_characters) for _ in range(0, length)]
             yield ''.join(array)
 
     return generate_text
@@ -114,8 +111,7 @@ def factory_choice_generator(values):
 
     def choice_generator():
         my_list = list(values)
-        rand = random.Random()
-        while (True):
+        while True:
             yield random.choice(my_list)
 
     return choice_generator
@@ -136,7 +132,7 @@ def factory_env_variable(env_variable):
 
     def return_variable():
         variable_name = env_variable
-        while (True):
+        while True:
             yield os.environ.get(variable_name)
 
     return return_variable
@@ -146,9 +142,8 @@ def factory_env_string(env_string):
     """ Return a generator function that uses OS expand path to expand environment variables in string """
 
     def return_variable():
-        my_input = env_string
-        while (True):
-            yield os.path.expandvars(my_input)
+        while True:
+            yield os.path.expandvars(env_string)
 
     return return_variable
 
@@ -183,7 +178,8 @@ def parse_random_text_generator(configuration):
         max_length = length
 
     if characters:
-        return factory_generate_text(legal_characters=characters, min_length=min_length, max_length=max_length)()
+        return factory_generate_text(
+            legal_characters=characters, min_length=min_length, max_length=max_length)()
     else:
         return factory_generate_text(min_length=min_length, max_length=max_length)()
 

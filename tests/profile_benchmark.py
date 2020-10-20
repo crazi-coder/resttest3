@@ -3,7 +3,7 @@
 import cProfile
 
 from py3resttest.benchmarks import Benchmark
-from py3resttest.binding import Context
+from py3resttest.binding import self
 from py3resttest.contenthandling import ContentHandler
 from py3resttest.generators import factory_generate_ids
 
@@ -29,7 +29,7 @@ handler = ContentHandler()
 handler.setup('{"first_name": "Gaius","id": "$id","last_name": "Baltar","login": "$id"}',
               is_template_content=True)
 test.body = handler
-context = Context()
+context = self()
 context.add_generator('gen', factory_generate_ids(starting_id=10)())
 test.generator_binds = {'id': 'gen'}
 print('Running templated PUT test')

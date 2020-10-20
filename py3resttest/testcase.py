@@ -1,533 +1,641 @@
-import copy
 import json
-from io import BytesIO as MyIO
+import logging
+import os
+import string
+import time
+import traceback
+from io import BytesIO
+from typing import List, Dict
 from urllib.parse import urljoin
-
 import pycurl
+from pathlib import Path
 
-from py3resttest import validators
-from py3resttest.constants import DEFAULT_TIMEOUT
+from py3resttest.binding import Context
+from py3resttest.constants import AuthType, YamlKeyWords, TestCaseKeywords, DEFAULT_TIMEOUT, EnumHttpMethod
 from py3resttest.contenthandling import ContentHandler
-from py3resttest.parsing import *
+from py3resttest.exception import HttpMethodError, BindError, ValidatorError
+from py3resttest.parsing import safe_to_json, lowercase_keys, flatten_dictionaries
+from py3resttest.utils import read_testcase_file, ChangeDir, Parser
+from py3resttest.validators import parse_extractor, parse_validator, FAILURE_CURL_EXCEPTION, Failure, \
+    FAILURE_INVALID_RESPONSE, FAILURE_TEST_EXCEPTION
 
-"""
-Pull out the Test objects and logic associated with them
-This module implements the internal responsibilities of a test object:
-- Test parameter/configuration storage
-- Templating for tests
-- Parsing of test configuration from results of YAML read
-"""
-
-HTTP_METHODS = {u'GET': pycurl.HTTPGET,
-                u'PUT': pycurl.UPLOAD,
-                u'PATCH': pycurl.POSTFIELDS,
-                u'POST': pycurl.POST,
-                u'DELETE': 'DELETE'}
+logger = logging.getLogger('py3resttest')
 
 
-# Parsing helper functions
-def coerce_to_string(val):
-    if isinstance(val, str):
-        return val
-    elif isinstance(val, int):
-        return str(val)
-    elif isinstance(val, (bytes, bytearray)):
-        return val.decode('utf-8')
-    else:
-        raise TypeError("Input {0} is not a string or integer, and it needs to be!".format(val))
-
-
-def coerce_string_to_ascii(val):
-    if isinstance(val, str):
-        return val.encode('ascii')
-    elif isinstance(val, (bytes, bytearray)):
-        return val
-    else:
-        raise TypeError("Input {0} is not a string, string expected".format(val))
-
-
-def coerce_http_method(val: str):
-    try:
-        val = val.decode()
-    except (UnicodeDecodeError, AttributeError):
-        pass
-    if not isinstance(val, str) or len(val) == 0:
-        raise TypeError("Invalid HTTP method name: input {0} is not a string or has 0 length".format(val))
-
-    return val.upper()
-
-
-def coerce_list_of_ints(val):
-    """ If single value, try to parse as integer, else try to parse as list of integer """
-    if isinstance(val, list):
-        return [int(x) for x in val]
-    else:
-        return [int(val)]
-
-
-class Test(object):
-    """ Describes a REST test """
-    _url = None
-    expected_status = [200]  # expected HTTP status code or codes
-    _body = None
-    _headers = dict()  # HTTP Headers
-    method = u'GET'
-    group = u'Default'
-    name = u'Unnamed'
-    validators = None  # Validators for response body, IE regexes, etc
-    stop_on_failure = False
-    failures = None
-    auth_username = None
-    auth_password = None
-    auth_type = pycurl.HTTPAUTH_BASIC
-    delay = 0
-    curl_options = None
-
-    templates = None  # Dictionary of template to compiled template
-
-    # Bind variables, generators, and contexts
-    variable_binds = None
-    generator_binds = None  # Dict of variable name and then generator name
-    extract_binds = None  # Dict of variable name and extract function to run
+class TestCaseConfig:
 
     def __init__(self):
-        self.headers = dict()
-        self.expected_status = [200]
-        self.templated = dict()
+        self.__variable_binds_dict = {}
 
-    @staticmethod
-    def has_contains():
-        return 'contains' in validators.VALIDATORS
+    @property
+    def variable_binds_dict(self):
+        return self.__variable_binds_dict
 
-    def ninja_copy(self):
-        """ Optimization: limited copy of test object, for realize() methods
-            This only copies fields changed vs. class, and keeps methods the same
-        """
-        output = Test()
-        myvars = vars(self)
-        output.__dict__ = myvars.copy()
-        return output
+    @variable_binds_dict.setter
+    def variable_binds_dict(self, variable_dict):
+        if isinstance(variable_dict, dict):
+            self.__variable_binds_dict.update(variable_dict)
 
-    # Template handling logic
-    def set_template(self, variable_name, template_string):
-        """ Add a templating instance for variable given """
-        if self.templates is None:
-            self.templates = dict()
-        self.templates[variable_name] = string.Template(template_string)
+    def parse(self, config_node):
+        return
 
-    def del_template(self, variable_name):
-        """ Remove template instance, so we no longer use one for this test """
-        if self.templates is not None and variable_name in self.templates:
-            del self.templates[variable_name]
+    def __str__(self):
+        return json.dumps(self, default=safe_to_json)
 
-    def realize_template(self, variable_name, context):
-        """ Realize a templated value, using variables from context
-            Returns None if no template is set for that variable """
-        val = None
-        if context is None or self.templates is None or variable_name not in self.templates:
-            return None
-        return self.templates[variable_name].safe_substitute(context.get_values())
 
-    # These are variables that can be templated
-    def set_body(self, value):
-        """ Set body, directly """
-        self._body = value
+class TestSet:
+    __testcase_file = set()
+    test_group_list_dict = {}
 
-    def get_body(self, context=None):
-        """ Read body from file, applying template if pertinent """
-        if self._body is None:
-            return None
-        elif isinstance(self._body, str):
-            return self._body
+    def __init__(self):
+        self.__context = Context()
+        self.__extract_binds = {}
+        self.__variable_binds = {}
+
+    def parse(self, base_url: str, testcase_list: List, test_file=None, working_directory=None, variable_dict=None):
+
+        testcase_config = TestCaseConfig()
+
+        if working_directory is None:
+            working_directory = os.path.abspath(os.getcwd())
         else:
-            return self._body.get_content(context=context)
+            working_directory = Path(working_directory)
+        if variable_dict is None:
+            testcase_config.variable_binds = variable_dict
+        if test_file:
+            self.__testcase_file.add(test_file)
 
-    body = property(get_body, set_body, None,
-                    'Request body, if any (for POST/PUT methods)')
+        for testcase_node in testcase_list:
+            if not isinstance(testcase_node, dict):
+                logger.warning("Skipping the configuration %s" % testcase_node)
+                continue
 
-    NAME_URL = 'url'
+            testcase_node = lowercase_keys(testcase_node)
+            for key in testcase_node:
+                sub_testcase_node = testcase_node[key]
+                if key == YamlKeyWords.INCLUDE:
+                    if not isinstance(sub_testcase_node, list):
+                        raise ValueError("include should be list not %s" % type(sub_testcase_node))
+                    for testcase_file_path in sub_testcase_node:
+                        testcase_file_path = testcase_file_path.replace('.', '/')
+                        testcase_file = working_directory.joinpath("%s.yaml" % testcase_file_path).resolve()
+                        if testcase_file not in self.__testcase_file:
+                            self.__testcase_file.add(testcase_file)
+                            import_testcase_list = read_testcase_file(testcase_file)
+                            with ChangeDir(working_directory):
+                                self.parse(base_url, import_testcase_list, variable_dict=variable_dict)
+                elif key == YamlKeyWords.IMPORT:
+                    if sub_testcase_node not in self.__testcase_file:
+                        testcase_file_path = os.path.dirname(os.path.realpath(sub_testcase_node))
+                        logger.debug("Importing testcase from %s", testcase_file_path)
+                        self.__testcase_file.add(sub_testcase_node)
+                        import_testcase_list = read_testcase_file(testcase_file_path)
+                        with ChangeDir(testcase_file_path):
+                            self.parse(base_url, import_testcase_list, variable_dict=variable_dict)
+                elif key == YamlKeyWords.URL:
+                    __group_name = TestCaseGroup.DEFAULT_GROUP
+                    try:
+                        group_object = TestSet.test_group_list_dict[__group_name]
+                    except KeyError:
+                        group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP)
+                        TestSet.test_group_list_dict[__group_name] = group_object
+                    testcase_object = TestCase(
+                        base_url=base_url, extract_binds=group_object.extract_binds,
+                        variable_binds=group_object.variable_binds, context=group_object.context
+                    )
+                    testcase_object.url = testcase_node[key]
+                    group_object.testcase_list = testcase_object
 
-    def set_url(self, value, isTemplate=False):
-        """ Set URL, passing flag if using a template """
-        if isTemplate:
-            self.set_template(self.NAME_URL, value)
-        else:
-            self.del_template(self.NAME_URL)
-        self._url = value
+                elif key == YamlKeyWords.TEST:
+                    with ChangeDir(working_directory):
+                        __group_name = None
+                        for node_dict in sub_testcase_node:
+                            __group_name = node_dict.get(TestCaseKeywords.group)
+                            if __group_name:
+                                break
+                        __group_name = __group_name if __group_name else TestCaseGroup.DEFAULT_GROUP
+                        try:
+                            group_object = TestSet.test_group_list_dict[__group_name]
+                        except KeyError:
+                            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP)
+                            TestSet.test_group_list_dict[__group_name] = group_object
 
-    def get_url(self, context=None):
-        """ Get URL, applying template if pertinent """
-        val = self.realize_template(self.NAME_URL, context)
+                        testcase_object = TestCase(
+                            base_url=base_url, extract_binds=group_object.extract_binds,
+                            variable_binds=group_object.variable_binds, context=group_object.context
+                        )
+                        testcase_object.parse(sub_testcase_node)
+                        group_object.testcase_list = testcase_object
+
+                elif key == YamlKeyWords.BENCHMARK:
+                    ...
+
+                elif key == YamlKeyWords.CONFIG:
+                    testcase_config_object = TestCaseConfig()
+                    testcase_config_object.parse(sub_testcase_node)
+
+        return
+
+
+class TestCaseGroup:
+    DEFAULT_GROUP = "NO GROUP"
+
+    def __init__(self, name, context=None, extract_binds=None, variable_binds=None):
+        self.__testcase_list = []
+        self.__benchmark_list = []
+        self.__config = None
+        self.__name = name
+        self.__testcase_file = set()
+        self.__context = context if context else Context()
+        self.__extract_binds = extract_binds if extract_binds else {}
+        self.__variable_binds = variable_binds if variable_binds else {}
+
+    @property
+    def testcase_list(self):
+        return self.__testcase_list
+
+    @testcase_list.setter
+    def testcase_list(self, testcase_object):
+        self.__testcase_list.append(testcase_object)
+
+    @property
+    def benchmark_list(self):
+        return self.__benchmark_list
+
+    @benchmark_list.setter
+    def benchmark_list(self, benchmark_objet):
+        self.__benchmark_list.append(benchmark_objet)
+
+    @property
+    def extract_binds(self):
+        return self.__extract_binds
+
+    @property
+    def variable_binds(self):
+        return self.__variable_binds
+
+    @property
+    def context(self):
+        return self.__context
+
+
+class TestResult:
+
+    def __init__(self,  body, status_code):
+        self.__headers = None
+        self.__body = body
+        self.__status_code = status_code
+        self.__status = False
+        self.__elapsed = 0.000
+        self.__failure_list = []
+
+    @property
+    def failures(self):
+        return self.__failure_list
+
+    @failures.setter
+    def failures(self, value):
+        self.__failure_list.append(value)
+
+    @property
+    def headers(self):
+        return self.__headers
+
+    @headers.setter
+    def headers(self, value):
+        self.__headers = value
+
+
+class TestCase:
+    DEFAULT_NAME = "NO NAME"
+
+    KEYWORD_DICT = {k: v for k, v in TestCaseKeywords.__dict__.items() if not k.startswith('__')}
+
+    def __init__(self, base_url, extract_binds, variable_binds, context=None):
+        self.__base_url = base_url
+        self.__url = None
+        self.__body = None
+        self.__auth_username = None
+        self.__auth_password = None
+        self.__delay = 0
+        self.__verbose = False
+        self.__ssl_insecure = False
+        self.__response_headers = None
+        self.__response_code = None
+        self.__passed = False
+        self.__failure_list = []
+
+        self.__header_dict = {}
+        self.__http_method = EnumHttpMethod.GET.name
+        self.__group = TestCaseGroup.DEFAULT_GROUP
+        self.__name = TestCase.DEFAULT_NAME
+        self._should_stop_on_failure = False
+        self._test_run_delay = 0
+        self._auth_type = AuthType.BASIC
+        self._curl_options = None
+        self.__variable_binds_dict = variable_binds if variable_binds else {}
+        self.__generator_binds_dict = {}
+        self.__extract_binds_dict = extract_binds if extract_binds else {}
+        self.__validator_list = []
+
+        self.__expected_http_status_code_list = [200]
+        self.__context = Context() if context is None else context
+
+        self.templates = {}
+        self.result = None
+
+    def __str__(self):
+        return json.dumps(self, default=safe_to_json)
+
+    @property
+    def auth_username(self):
+        return self.__auth_username
+
+    @auth_username.setter
+    def auth_username(self, username):
+        self.__auth_username = Parser.coerce_string_to_ascii(username)
+
+    @property
+    def auth_password(self):
+        return self.__auth_password
+
+    @auth_password.setter
+    def auth_password(self, password):
+        self.__auth_password = Parser.coerce_string_to_ascii(password)
+
+    @property
+    def http_method(self):
+        return self.__http_method
+
+    @http_method.setter
+    def http_method(self, method: str):
+        __method = ["GET", "PUT", "POST", "DELETE", "PATCH"]
+        if method.upper() not in __method:
+            raise HttpMethodError("Method %s is not supported." % method)
+        self.__http_method = method.upper()
+
+    @property
+    def name(self):
+        return self.__name
+
+    @property
+    def group(self):
+        return self.__group
+
+    @property
+    def is_passed(self):
+        return bool(self.__passed)
+
+    @property
+    def url(self):
+        val = self.realize_template("url", self.__context)
         if val is None:
-            val = self._url
+            val = self.__url
         return val
 
-    url = property(get_url, set_url, None, 'URL fragment for request')
-
-    NAME_HEADERS = 'headers'
-
-    # Totally different from others
-
-    def set_headers(self, value, is_template: bool = False):
-        """ Set headers, passing flag if using a template """
-        if is_template:
-            self.set_template(self.NAME_HEADERS, 'Dict_Templated')
+    @url.setter
+    def url(self, value):
+        if isinstance(value, dict):
+            # this is the templated url , we need to convert it into actual URL
+            template_str = lowercase_keys(value)['template']
+            url = urljoin(self.__base_url, Parser.coerce_to_string(template_str))
+            self.set_template("url", url)
+            self.__url = url
         else:
-            self.del_template(self.NAME_HEADERS)
-        self._headers = value
+            url = urljoin(self.__base_url, Parser.coerce_to_string(value))
+            self.__url = url
 
-    def get_headers(self, context=None):
-        """ Get headers, applying template if pertinent """
-        if not context or not self.templates or self.NAME_HEADERS not in self.templates:
-            return self._headers
+    @property
+    def generator_binds(self):
+        return self.__generator_binds_dict
 
-        # We need to apply templating to both keys and values
-        vals = context.get_values()
+    @generator_binds.setter
+    def generator_binds(self, value: Dict):
+        binds_dict = flatten_dictionaries(value)
+        __binds_dict = {str(k): str(v) for k, v in binds_dict.items()}
+        self.__generator_binds_dict.update(__binds_dict)
 
-        def template_tuple(tuple_input):
-            return (string.Template(str(tuple_item)).safe_substitute(vals) for tuple_item in tuple_input)
+    @property
+    def variable_binds(self):
+        return self.__variable_binds_dict
 
-        return dict(map(template_tuple, self._headers.items()))
+    @property
+    def extract_binds(self):
+        return self.__extract_binds_dict
 
-    headers = property(get_headers, set_headers, None,
-                       'Headers dictionary for request')
+    @extract_binds.setter
+    def extract_binds(self, bind_dict):
+        bind_dict = flatten_dictionaries(bind_dict)
+        for variable_name, extractor in bind_dict.items():
+            if not isinstance(extractor, dict) or len(extractor) == 0:
+                raise BindError("Extractors must be defined as maps of extractorType:{configs} with 1 entry")
+            if len(extractor) > 1:
+                raise BindError("Cannot define multiple extractors for given variable name")
+            for extractor_type, extractor_config in extractor.items():
+                self.__extract_binds_dict[variable_name] = parse_extractor(extractor_type, extractor_config)
 
-    def update_context_before(self, context):
-        """ Make pre-test context updates, by applying variable and generator updates """
+    @property
+    def expected_http_status_code_list(self):
+        return [int(x) for x in self.__expected_http_status_code_list]
+
+    @expected_http_status_code_list.setter
+    def expected_http_status_code_list(self, value):
+        self.__expected_http_status_code_list = value
+
+    @property
+    def validators(self):
+        return self.__validator_list
+
+    @validators.setter
+    def validators(self, validator_list):
+        if not isinstance(validator_list, list):
+            raise ValidatorError('Misconfigured validator section, must be a list of validators')
+        for validator in validator_list:
+            if not isinstance(validator, dict):
+                raise ValidatorError("Validators must be defined as validatorType:{configs} ")
+            for validator_type, validator_config in validator.items():
+                validator = parse_validator(validator_type, validator_config)
+                self.__validator_list.append(validator)
+
+    @property
+    def headers(self) -> Dict:
+        # if not self.templates.get('headers'):
+        #     return self.__header_dict
+        context_values = self.__context.get_values()
+        header_dict = {}
+        for key, header in self.__header_dict.items():
+            if isinstance(header, dict):
+                templated_value = header.get('template')
+                if templated_value:
+                    templated_string = string.Template(templated_value).safe_substitute(context_values)
+                    header_dict[key] = templated_string
+                else:
+                    header_dict[key] = header
+            else:
+                header_dict[key] = header
+
+        return header_dict
+
+    @headers.setter
+    def headers(self, headers):
+        config_value = flatten_dictionaries(headers)
+        if isinstance(config_value, dict):
+            for key, value in config_value.items():
+                if isinstance(value, dict):
+                    if value.get('template'):
+                        self.set_template("headers", value.get('template'))
+            self.__header_dict.update(config_value)
+        else:
+            raise ValidatorError("Illegal header type: headers must be a dictionary or list of dictionary keys")
+
+    def set_template(self, variable_name, template_string):
+        self.templates[variable_name] = string.Template(str(template_string))
+
+    @property
+    def body(self):
+        if isinstance(self.__body, str) or self.__body is None:
+            return self.__body
+        else:
+            return self.__body.get_content(context=self.__context)
+
+    @body.setter
+    def body(self, value):
+        if value:
+            if isinstance(value, bytes):
+                self.__body = ContentHandler.parse_content(value.decode())
+            else:
+                self.__body = ContentHandler.parse_content(value)
+        else:
+            self.__body = value
+
+    @property
+    def failures(self):
+        return self.__failure_list
+
+    def realize_template(self, variable_name, context):
+        if context is None or self.templates is None or variable_name not in self.templates:
+            return None
+        if not context.get_values():
+            return None
+
+        val = self.templates[variable_name].substitute(context.get_values())
+        return val
+
+    def parse(self, testcase_dict):
+        testcase_dict = lowercase_keys(flatten_dictionaries(testcase_dict))
+
+        for keyword in TestCase.KEYWORD_DICT.keys():
+            value = testcase_dict.get(keyword)
+            if value is None:
+                continue
+
+            if keyword == TestCaseKeywords.auth_username:
+                self.auth_username = value
+            elif keyword == TestCaseKeywords.auth_password:
+                self.auth_password = value
+            elif keyword == TestCaseKeywords.method:
+                self.http_method = value
+            elif keyword == TestCaseKeywords.delay:
+                self.__delay = int(value)
+            elif keyword == TestCaseKeywords.group:
+                self.__group = value
+            elif keyword == TestCaseKeywords.name:
+                self.__name = value
+            elif keyword == TestCaseKeywords.url:
+                self.url = value
+            elif keyword == TestCaseKeywords.extract_binds:
+                self.extract_binds = value
+            elif keyword == TestCaseKeywords.validators:
+                self.validators = value
+            elif keyword == TestCaseKeywords.headers:
+                self.headers = value
+            elif keyword == TestCaseKeywords.variable_binds:
+                self.__variable_binds_dict = flatten_dictionaries(value)
+            elif keyword == TestCaseKeywords.generator_binds:
+                self.__generator_binds_dict = {str(k): str(v) for k, v in flatten_dictionaries(value)}
+            elif keyword == TestCaseKeywords.options:
+                raise NotImplementedError("Yet to Support")
+            elif keyword == TestCaseKeywords.body:
+                self.body = value
+
+        expected_status = testcase_dict.get(TestCaseKeywords.expected_status, [])
+        if expected_status:
+            self.expected_http_status_code_list = expected_status
+        else:
+            if self.http_method in ["POST", "PUT", "DELETE"]:
+                self.expected_http_status_code_list = [200, 201, 204]
+
+        return
+
+    def pre_update(self, context):
         if self.variable_binds:
             context.bind_variables(self.variable_binds)
         if self.generator_binds:
             for key, value in self.generator_binds.items():
                 context.bind_generator_next(key, value)
+        return
 
-    def update_context_after(self, response_body, headers, context):
-        """ Run the extraction routines to update variables based on HTTP response body """
+    def post_update(self, context):
         if self.extract_binds:
             for key, value in self.extract_binds.items():
                 result = value.extract(
-                    body=response_body, headers=headers, context=context)
-                context.bind_variable(key, result)
-
-    def is_context_modifier(self):
-        """ Returns true if context can be modified by this test
-            (disallows caching of templated test bodies) """
-        return self.variable_binds or self.generator_binds or self.extract_binds
+                    body=self.body, headers=self.headers, context=context)
+                if result:
+                    context.bind_variable(key, result)
+        return
 
     def is_dynamic(self):
-        """ Returns true if this test does templating """
         if self.templates:
             return True
-        elif isinstance(self._body, ContentHandler) and self._body.is_dynamic():
+        if isinstance(self.__body, ContentHandler) and self.__body.is_dynamic():
             return True
         return False
 
-    def realize(self, context=None):
-        """ Return a fully-templated test object, for configuring curl
-            Warning: this is a SHALLOW copy, mutation of fields will cause problems!
-            Can accept a None context """
-        if not self.is_dynamic() or context is None:
-            return self
-        else:
-            selfcopy = self.ninja_copy()
-            selfcopy.templates = None
-            if isinstance(self._body, ContentHandler):
-                selfcopy._body = self._body.get_content(context)
-            selfcopy._url = self.get_url(context=context)
-            selfcopy._headers = self.get_headers(context=context)
-            return selfcopy
+    def render(self):
+        if self.is_dynamic() or self.__context is not None:
+            if isinstance(self.__body, ContentHandler):
+                self.__body = self.__body.get_content(self.__context)
 
-    def realize_partial(self, context=None):
-        """ Attempt to template out what is static if possible, and load files.
-            Used for performance optimization, in cases where a test is re-run repeatedly
-            WITH THE SAME Context.
-        """
+        return
 
-        if self.is_context_modifier():
-            # Don't template what is changing
-            return self
-        elif self.is_dynamic():  # Dynamic but doesn't modify context, template everything
-            return self.realize(context=context)
+    def __perform_validation(self) -> List:
 
-        # See if body can be replaced
-        bod = self._body
-        newbod = None
-        if bod and isinstance(bod, ContentHandler) and bod.is_file and not bod.is_template_path:
-            # File can be UN-lazy loaded
-            newbod = bod.create_noread_version()
+        failure_list = []
+        for validator in self.validators:
+            logger.debug("Running validator: %s" % validator.name)
+            validate_result = validator.validate(body=self.body, headers=self.headers, context=self.__context)
+            if not validate_result:
+                self.__passed = False
+            if hasattr(validate_result, 'details'):
+                failure_list.append(validate_result)
 
-        output = self
-        if newbod:  # Read body
-            output = copy.copy(self)
-            output._body = newbod
-        return output
+        return failure_list
 
-    def __str__(self):
-        return json.dumps(self, default=safe_to_json)
+    def run(self, context=None, timeout=None, curl_handler=None):
 
-    def configure_curl(self, timeout=DEFAULT_TIMEOUT, context=None, curl_handle=None):
-        """ Create and mostly configure a curl object for test, reusing existing if possible """
+        if context is None:
+            context = self.__context
 
-        if curl_handle:
-            curl = curl_handle
+        self.pre_update(context)
+        self.render()
+        if timeout is None:
+            timeout = DEFAULT_TIMEOUT
+
+        if curl_handler:
 
             try:  # Check the curl handle isn't closed, and reuse it if possible
-                curl.getinfo(curl.HTTP_CODE)
+                curl_handler.getinfo(curl_handler.HTTP_CODE)
                 # Below clears the cookies & curl options for clean run
                 # But retains the DNS cache and connection pool
-                curl.reset()
-                curl.setopt(curl.COOKIELIST, "ALL")
+                curl_handler.reset()
+                curl_handler.setopt(curl_handler.COOKIELIST, "ALL")
             except pycurl.error:
-                curl = pycurl.Curl()
-
+                curl_handler = pycurl.Curl()
         else:
-            curl = pycurl.Curl()
+            curl_handler = pycurl.Curl()
 
-        # curl.setopt(pycurl.VERBOSE, 1)  # Debugging convenience
-        curl.setopt(curl.URL, str(self.url))
-        curl.setopt(curl.TIMEOUT, timeout)
+        body_byte = BytesIO()
+        header_byte = BytesIO()
+        curl_handler.setopt(curl_handler.URL, str(self.url))
+        curl_handler.setopt(curl_handler.TIMEOUT, timeout)
+        curl_handler.setopt(pycurl.WRITEFUNCTION, body_byte.write)
+        curl_handler.setopt(pycurl.HEADERFUNCTION, header_byte.write)
+        curl_handler.setopt(pycurl.VERBOSE, self.__verbose)
 
-        self.body = self.body.encode('UTF-8')
+        if self.__ssl_insecure:
+            curl_handler.setopt(pycurl.SSL_VERIFYPEER, 0)
+            curl_handler.setopt(pycurl.SSL_VERIFYHOST, 0)
 
-        # Set read function for post/put bodies
-        if self.body and len(self.body) > 0:
-            curl.setopt(curl.READFUNCTION, MyIO(self.body).read)
+        if self.body:
+            logger.debug("Request body %s" % self.body)
+            curl_handler.setopt(curl_handler.READFUNCTION, BytesIO(bytes(self.body, 'utf-8')).read)
 
         if self.auth_username and self.auth_password:
-            curl.setopt(pycurl.USERPWD,
-                        encode_unicode_bytes(self.auth_username) + b':' +
-                        encode_unicode_bytes(self.auth_password))
-            if self.auth_type:
-                curl.setopt(pycurl.HTTPAUTH, self.auth_type)
+            curl_handler.setopt(pycurl.USERPWD, self.auth_username + ':' + self.auth_password)
 
-        if self.method == u'POST':
-            curl.setopt(HTTP_METHODS[u'POST'], 1)
-            # Required for some servers
-            if self.body is not None:
-                curl.setopt(pycurl.POSTFIELDSIZE, len(self.body))
-            else:
-                curl.setopt(pycurl.POSTFIELDSIZE, 0)
-        elif self.method == u'PUT':
-            curl.setopt(HTTP_METHODS[u'PUT'], 1)
-            # Required for some servers
-            if self.body is not None:
-                curl.setopt(pycurl.INFILESIZE, len(self.body))
-            else:
-                curl.setopt(pycurl.INFILESIZE, 0)
-        elif self.method == u'PATCH':
-            curl.setopt(curl.POSTFIELDS, self.body)
-            curl.setopt(curl.CUSTOMREQUEST, 'PATCH')
-            # Required for some servers
-            # I wonder: how compatible will this be?  It worked with Django but feels iffy.
-            if self.body is not None:
-                curl.setopt(pycurl.INFILESIZE, len(self.body))
-            else:
-                curl.setopt(pycurl.INFILESIZE, 0)
-        elif self.method == u'DELETE':
-            curl.setopt(curl.CUSTOMREQUEST, 'DELETE')
-            if self.body is not None:
-                curl.setopt(pycurl.POSTFIELDS, self.body)
-                curl.setopt(pycurl.POSTFIELDSIZE, len(self.body))
-        elif self.method == u'HEAD':
-            curl.setopt(curl.NOBODY, 1)
-            curl.setopt(curl.CUSTOMREQUEST, 'HEAD')
-        elif self.method and self.method.upper() != 'GET':  # Alternate HTTP methods
-            curl.setopt(curl.CUSTOMREQUEST, self.method.upper())
-            if self.body is not None:
-                curl.setopt(pycurl.POSTFIELDS, self.body)
-                curl.setopt(pycurl.POSTFIELDSIZE, len(self.body))
+        body_length = len(self.body) if self.body else 0
+        if self.http_method == EnumHttpMethod.POST.name:
+            curl_handler.setopt(EnumHttpMethod.POST.value, 1)
+            curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
 
-        # Template headers as needed and convert headers dictionary to list of header entries
-        head = self.get_headers(context=context)
-        head = copy.copy(head)  # We're going to mutate it, need to copy
+        elif self.http_method == EnumHttpMethod.PUT.name:
+            curl_handler.setopt(EnumHttpMethod.PUT.value, 1)
+            curl_handler.setopt(pycurl.INFILESIZE, body_length)
 
-        # Set charset if doing unicode conversion and not set explicitly
-        if head.get('content-type'):
-            content = head[u'content-type']
-            if 'charset' not in content:
-                head['content-type'] = content + ' ; charset=UTF-8'
+        elif self.http_method == EnumHttpMethod.PATCH.name:
+            curl_handler.setopt(EnumHttpMethod.PATCH.value, EnumHttpMethod.PATCH.name)
+            curl_handler.setopt(pycurl.POSTFIELDS, self.body)
 
-        if head:
-            headers = [str(headername) + ':' + str(headervalue)
-                       for headername, headervalue in head.items()]
+        elif self.http_method == EnumHttpMethod.DELETE.name:
+            curl_handler.setopt(EnumHttpMethod.DELETE.value, EnumHttpMethod.DELETE.name)
+            if self.body:
+                curl_handler.setopt(pycurl.POSTFIELDS, self.body)
+                curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
+
+        elif self.http_method == EnumHttpMethod.HEAD.name:
+            curl_handler.setopt(pycurl.NOBODY, 1)
+            curl_handler.setopt(EnumHttpMethod.HEAD.value, EnumHttpMethod.HEAD.name)
         else:
-            headers = list()
-        # Fix for expecting 100-continue from server, which not all servers
-        # will send!
+            curl_handler.setopt(pycurl.CUSTOMREQUEST, self.http_method.upper())
+            if self.body:
+                curl_handler.setopt(pycurl.POSTFIELDS, self.body)
+                curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
+
+        head = self.headers
+        if head.get('content-type'):
+            content_type = head['content-type']
+            head[u'content-type'] = content_type + ' ; charset=UTF-8'
+
+        headers = [str(header_name) + ':' + str(header_value) for header_name, header_value in head.items()]
         headers.append("Expect:")
         headers.append("Connection: close")
-        curl.setopt(curl.HTTPHEADER, headers)
+        logger.debug("Request headers %s " % head)
+        curl_handler.setopt(curl_handler.HTTPHEADER, headers)
 
-        # Set custom curl options, which are KEY:VALUE pairs matching the pycurl option names
-        # And the key/value pairs are set
-        if self.curl_options:
-            filterfunc = lambda x: x[0] is not None and x[1] is not None
-            for (key, value) in filter(filterfunc, self.curl_options.items()):
-                # getattr to look up constant for variable name
-                curl.setopt(getattr(curl, key), value)
-        return curl
+        if self.__delay:
+            time.sleep(self.__delay)
+        try:
+            logger.info("Hitting %s" % self.url)
+            curl_handler.perform()
+        except pycurl.error as e:
+            logger.error("Unknown Exception", exc_info=True)
+            self.__passed = False
+            curl_handler.close()
+            trace = traceback.format_exc()
+            self.__failure_list.append(
+                Failure(message="Curl Exception: {0}".format(e), details=trace, failure_type=FAILURE_CURL_EXCEPTION))
+            return
+        body = body_byte.getvalue()
+        body_byte.close()
+        logger.debug("RESPONSE: %s" % self.body)
+        response_code = curl_handler.getinfo(pycurl.RESPONSE_CODE)
+        self.body = body
+        self.__response_code = int(response_code)
 
-    @classmethod
-    def parse_test(cls, base_url, node, input_test=None, test_path=None):
-        """ Create or modify a test, input_test, using configuration in node, and base_url
-        If no input_test is given, creates a new one
+        try:
+            response_headers = Parser.parse_headers(header_byte.getvalue())
+            self.__response_headers = response_headers
+            logger.debug("RESPONSE HEADERS: %s" % self.__response_headers)
+            header_byte.close()
 
-        Test_path gives path to test file, used for setting working directory in setting up input bodies
+        except Exception as e:  # Need to catch the expected exception
+            trace = traceback.format_exc()
+            self.__failure_list.append(Failure(
+                message="Header parsing exception: {0}".format(e), details=trace, failure_type=FAILURE_TEST_EXCEPTION)
+            )
+            self.__passed = False
+            curl_handler.close()
+            return
 
-        Uses explicitly specified elements from the test input structure
-        to make life *extra* fun, we need to handle list <-- > dict transformations.
-
-        This is to say: list(dict(),dict()) or dict(key,value) -->  dict() for some elements
-
-        Accepted structure must be a single dictionary of key-value pairs for test configuration """
-
-        mytest = input_test
-        if not mytest:
-            mytest = Test()
-
-        # Clean up for easy parsing
-        node = lowercase_keys(flatten_dictionaries(node))
-
-        # Simple table of variable name, coerce function, and optionally special store function
-        CONFIG_ELEMENTS = {
-            # Simple variables
-            u'auth_username': [coerce_string_to_ascii],
-            u'auth_password': [coerce_string_to_ascii],
-            u'method': [coerce_http_method],  # HTTP METHOD
-            u'delay': [lambda x: int(x)],  # Delay before running
-            u'group': [coerce_to_string],  # Test group name
-            u'name': [coerce_to_string],  # Test name
-            u'expected_status': [coerce_list_of_ints],
-            u'stop_on_failure': [safe_to_bool],
-
-            # Templated / special handling
-            # u'url': [coerce_templatable, set_templated),  # TODO: special handling for templated content, sigh
-            u'body': [ContentHandler.parse_content]
-            # u'headers': [],
-
-            # COMPLEX PARSE OPTIONS
-            # u'extract_binds':[],  # Context variable-to-extractor output binding
-            # u'variable_binds': [],  # Context variable to value binding
-            # u'generator_binds': [],  # Context variable to generator output binding
-            # u'validators': [],  # Validation functions to run
-        }
-
-        def use_config_parser(configobject, configelement, configvalue):
-            """ Try to use parser bindings to find an option for parsing and storing config element
-                :configobject: Object to store configuration
-                :configelement: Configuratione element name
-                :configvalue: Value to use to set configuration
-                :returns: True if found match for config element, False if didn't
-            """
-
-            myparsing = CONFIG_ELEMENTS.get(configelement)
-            if myparsing:
-                converted = myparsing[0](configvalue)
-                setattr(configobject, configelement, converted)
-                return True
-            return False
-
-        # Copy/convert input elements into appropriate form for a test object
-        for configelement, configvalue in node.items():
-            if use_config_parser(mytest, configelement, configvalue):
-                continue
-
-            # Configure test using configuration elements
-            if configelement == u'url':
-                temp = configvalue
-                if isinstance(configvalue, dict):
-                    # Template is used for URL
-                    val = lowercase_keys(configvalue)[u'template']
-                    assert isinstance(val, str) or isinstance(val, int)
-                    url = urljoin(base_url, coerce_to_string(val))
-                    mytest.set_url(url, isTemplate=True)
-                else:
-                    assert isinstance(configvalue, str) or isinstance(
-                        configvalue, int)
-                    mytest.url = urljoin(base_url, coerce_to_string(configvalue))
-            elif configelement == u'extract_binds':
-                # Add a list of extractors, of format:
-                # {variable_name: {extractor_type: extractor_config}, ... }
-                binds = flatten_dictionaries(configvalue)
-                if mytest.extract_binds is None:
-                    mytest.extract_binds = dict()
-
-                for variable_name, extractor in binds.items():
-                    if not isinstance(extractor, dict) or len(extractor) == 0:
-                        raise TypeError(
-                            "Extractors must be defined as maps of extractorType:{configs} with 1 entry")
-                    if len(extractor) > 1:
-                        raise ValueError(
-                            "Cannot define multiple extractors for given variable name")
-
-                    # Safe because length can only be 1
-                    for extractor_type, extractor_config in extractor.items():
-                        mytest.extract_binds[variable_name] = validators.parse_extractor(extractor_type,
-                                                                                         extractor_config)
-
-
-            elif configelement == u'validators':
-                # Add a list of validators
-                if not isinstance(configvalue, list):
-                    raise Exception(
-                        'Misconfigured validator section, must be a list of validators')
-                if mytest.validators is None:
-                    mytest.validators = list()
-
-                # create validator and add to list of validators
-                for var in configvalue:
-                    if not isinstance(var, dict):
-                        raise TypeError(
-                            "Validators must be defined as validatorType:{configs} ")
-                    for validator_type, validator_config in var.items():
-                        validator = validators.parse_validator(
-                            validator_type, validator_config)
-                        mytest.validators.append(validator)
-
-            elif configelement == 'headers':  # HTTP headers to use, flattened to a single string-string dictionary
-                configvalue = flatten_dictionaries(configvalue)
-
-                if isinstance(configvalue, dict):
-                    filterfunc = lambda x: str(x[0]).lower() == 'template'  # Templated items
-                    templates = [x for x in filter(filterfunc, configvalue.items())]
-                else:
-                    templates = None
-
-                if templates:
-                    # Should have single entry in dictionary keys
-                    mytest.set_headers(templates[0][1], is_template=True)
-                elif isinstance(configvalue, dict):
-                    mytest.headers = configvalue
-                else:
-                    raise TypeError(
-                        "Illegal header type: headers must be a dictionary or list of dictionary keys")
-            elif configelement == 'variable_binds':
-                mytest.variable_binds = flatten_dictionaries(configvalue)
-            elif configelement == 'generator_binds':
-                output = flatten_dictionaries(configvalue)
-                output2 = dict()
-                for key, value in output.items():
-                    output2[str(key)] = str(value)
-                mytest.generator_binds = output2
-            elif configelement.startswith('curl_option_'):
-                curlopt = configelement[12:].upper()
-                if hasattr(pycurl.Curl(), curlopt):
-                    if not mytest.curl_options:
-                        mytest.curl_options = dict()
-                    mytest.curl_options[curlopt] = configvalue
-                else:
-                    raise ValueError(
-                        "Illegal curl option: {0}".format(curlopt))
-
-        # For non-GET requests, accept additional response codes indicating success
-        # (but only if not expected statuses are not explicitly specified)
-        # this is per HTTP spec:
-        # http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.5
-        if 'expected_status' not in node.keys():
-            if mytest.method == 'POST':
-                mytest.expected_status = [200, 201, 204]
-            elif mytest.method == 'PUT':
-                mytest.expected_status = [200, 201, 204]
-            elif mytest.method == 'DELETE':
-                mytest.expected_status = [200, 202, 204]
-            # Fallthrough default is simply [200]
-        return mytest
+        if self.__response_code in self.expected_http_status_code_list:
+            self.__passed = True
+            self.__failure_list.extend(self.__perform_validation())
+            self.post_update(context)
+        else:
+            self.__passed = False
+            failure_message = "Invalid HTTP response code: response code {0} not in expected codes {1}".format(
+                self.__response_code, self.expected_http_status_code_list
+            )
+            self.__failure_list.append(
+                Failure(message=failure_message, details=None, failure_type=FAILURE_INVALID_RESPONSE)
+            )
