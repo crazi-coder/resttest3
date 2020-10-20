@@ -12,8 +12,8 @@ class Context(object):
     """ Manages binding of variables & generators, with both variable name and generator name being strings """
 
     def __init__(self):
-        self.variables = dict()  # Maps variable name to current value
-        self.generators = dict()  # Maps generator name to generator function
+        self.variables = {}  # Maps variable name to current value
+        self.generators = {}  # Maps generator name to generator function
         self.mod_count = 0  # Lets us see if something has been altered, avoiding needless retemplating
 
     def bind_variable(self, variable_name, variable_value):

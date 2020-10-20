@@ -22,7 +22,7 @@ class JsonSchemaValidator(AbstractValidator):
                 body = body.decode()
             jsonschema.validate(json.loads(body), schema)
             return True
-        except jsonschema.exceptions.ValidationError as ve:
+        except jsonschema.exceptions.ValidationError:
             trace = traceback.format_exc()
             return Failure(message="JSON Schema Validation Failed", details=trace, validator=self,
                            failure_type=FAILURE_VALIDATOR_EXCEPTION)

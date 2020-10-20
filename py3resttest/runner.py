@@ -1,14 +1,14 @@
+import logging
 import os
 import sys
 from argparse import ArgumentParser
-import logging
 from pathlib import Path
 from typing import Dict, List
 
 import yaml
-from py3resttest.testcase import TestSet
 
-from utils import register_extensions
+from py3resttest.testcase import TestSet
+from py3resttest.utils import register_extensions
 
 logger = logging.getLogger('py3resttest')
 logging.basicConfig(format='%(levelname)s:%(message)s')
@@ -87,15 +87,19 @@ class Runner:
             for testcase_object in test_group_object.testcase_list:
                 if testcase_object.failures:
                     for failure in testcase_object.failures:
-                        logger.warning("%s Failed: %s" % (testcase_object.name, failure))
-                        logger.warning("%s BODY: %s" % (testcase_object.name, testcase_object.body))
-                        logger.warning("%s HEADER: %s" % (testcase_object.name, testcase_object.headers))
+                        if testcase_object.is_passed:
+                            logger.info("%s Success: %s" % (testcase_object.name, failure))
+                        else:
+                            logger.info("%s Failed: %s" % (testcase_object.name, failure))
+                            logger.warning("%s BODY: %s" % (testcase_object.name, testcase_object.body))
+                            logger.warning("%s HEADER: %s" % (testcase_object.name, testcase_object.headers))
 
                 else:
                     logger.info("Success: %s " % testcase_object.name)
 
         return 0
 
-if __name__ == '__main__':
+
+def main():
     r = Runner()
     r.main()

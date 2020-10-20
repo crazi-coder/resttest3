@@ -8,4 +8,3 @@ class BindError(Exception):
 
 class ValidatorError(Exception):
     ...
-

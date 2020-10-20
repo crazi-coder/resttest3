@@ -18,7 +18,7 @@
 
 - test:
   - name: "Test with validations that will fail"
-  - url: "/search/users?q=abhijo89-to"
+  - url: "/search/users?q=abhijo89-to-gdfgdg"
   - group: "Failure"
   - validators:
      - compare: {jsonpath_mini: "total_count", comparator: "eq", expected: 0}

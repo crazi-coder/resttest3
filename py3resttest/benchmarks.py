@@ -5,7 +5,6 @@ import pycurl
 
 from .constants import DEFAULT_TIMEOUT
 from .parsing import flatten_dictionaries, lowercase_keys
-
 from .testcase import Test, coerce_to_string, safe_to_json
 
 """
@@ -65,12 +64,9 @@ METRICS = {
 # Map statistical aggregate to the function to use to perform the
 # aggregation on an array
 AGGREGATES = {
-    'mean_arithmetic':  # AKA the average, good for many things
-        lambda x: float(sum(x)) / float(len(x)),
-    'mean':  # Alias for arithmetic mean
-        lambda x: float(sum(x)) / float(len(x)),
-    'mean_harmonic':  # Harmonic mean, better predicts average of rates: http://en.wikipedia.org/wiki/Harmonic_mean
-        lambda x: 1.0 / (sum([1.0 / float(y) for y in x]) / float(len(x))),
+    'mean_arithmetic': lambda x: float(sum(x)) / float(len(x)),
+    'mean': lambda x: float(sum(x)) / float(len(x)),
+    'mean_harmonic': lambda x: 1.0 / (sum([1.0 / float(y) for y in x]) / float(len(x))),
     'median': lambda x: median(x),
     'std_deviation': lambda x: std_deviation(x),
     'sum': lambda x: sum(x),
@@ -134,7 +130,8 @@ class Benchmark(Test):
         return output
 
     def add_metric(self, metric_name, aggregate=None):
-        """ Add a metric-aggregate pair to the benchmark, where metric is a number to measure from curl, and aggregate is an aggregation function
+        """ Add a metric-aggregate pair to the benchmark, where metric is a number to measure from curl,
+            and aggregate is an aggregation function
             (See METRICS and AGGREGATES)
             If aggregate is not defined (False,empty, or None), then the raw number is reported
             Returns self, for fluent-syle construction of config """

@@ -8,7 +8,6 @@ import traceback
 
 from py3resttest.parsing import flatten_dictionaries, lowercase_keys
 
-
 logger = logging.getLogger('py3resttest.validators')
 
 # Binary comparison tests
@@ -85,13 +84,13 @@ def safe_length(var):
     output = -1
     try:
         output = len(var)
-    except:
+    except Exception:
         pass
     return output
 
 
-def regex_compare(input, regex):
-    return bool(re.search(regex, input))
+def regex_compare(input_val, regex):
+    return bool(re.search(regex, input_val))
 
 
 # Validator Failure Reasons
@@ -228,7 +227,7 @@ class MiniJsonExtractor(AbstractExtractor):
                         dictionary = dictionary[x]
                     except ValueError:
                         dictionary = dictionary[x]
-        except:
+        except Exception:
             return None
         return dictionary
 
@@ -279,8 +278,6 @@ class RawBodyExtractor(AbstractExtractor):
 def _get_extractor(config_dict):
     """ Utility function, get an extract function for a single valid extractor name in config
         and error if more than one or none """
-    extractor = None
-    extract_config = None
     for key, value in config_dict.items():
         if key in EXTRACTORS:
             return parse_extractor(key, value)
@@ -327,7 +324,7 @@ class ComparatorValidator(AbstractValidator):
         try:
             extracted_val = self.extractor.extract(
                 body=body, headers=headers, context=context)
-        except Exception as e:
+        except Exception:
             trace = traceback.format_exc()
             return Failure(message="Extractor threw exception", details=trace, validator=self,
                            failure_type=FAILURE_EXTRACTOR_EXCEPTION)
@@ -336,9 +333,8 @@ class ComparatorValidator(AbstractValidator):
         expected_val = None
         if isinstance(self.expected, AbstractExtractor):
             try:
-                expected_val = self.expected.extract(
-                    body=body, headers=headers, context=context)
-            except Exception as e:
+                self.expected.extract(body=body, headers=headers, context=context)
+            except Exception:
                 trace = traceback.format_exc()
                 return Failure(message="Expected value extractor threw exception", details=trace, validator=self,
                                failure_type=FAILURE_EXTRACTOR_EXCEPTION)
@@ -452,7 +448,7 @@ class ExtractTestValidator(AbstractValidator):
         try:
             extracted = self.extractor.extract(
                 body=body, headers=headers, context=context)
-        except Exception as e:
+        except Exception:
             trace = traceback.format_exc()
             return Failure(message="Exception thrown while running extraction from body", details=trace, validator=self,
                            failure_type=FAILURE_EXTRACTOR_EXCEPTION)

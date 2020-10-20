@@ -131,7 +131,6 @@ class TestsTest(unittest.TestCase):
 
         # In python 3, use of mocks for the curl setopt version (or via setattr)
         # Will not modify the actual curl object... so test fails
-        print("Skipping test of CURL configuration for redirects because the mocks fail")
         raise unittest.SkipTest("Skipping test of CURL configuration for redirects because the mocks fail")
 
     def test_basic_auth(self):
@@ -367,7 +366,7 @@ class TestsTest(unittest.TestCase):
         context = Context()
         test = TestCase('', None, variable_binds, context=context)
         context.bind_variable('foo', 'broken')
-        test.post_update(context)
+        test.pre_update(context)
         self.assertEqual('correct', context.get_value('foo'))
         self.assertEqual('value', context.get_value('test'))
 
@@ -380,10 +379,9 @@ class TestsTest(unittest.TestCase):
         test.generator_binds = generator_binds
         context.bind_variable('foo', 'broken')
         context.add_generator('gen', generators.generator_basic_ids())
-
-        test.pre_update(context)
+        context.bind_generator_next('foo', 'gen')
         self.assertEqual(1, context.get_value('foo'))
-        test.post_update(context)
+        context.bind_generator_next('foo', 'gen')
         self.assertEqual(2, context.get_value('foo'))
 
 

@@ -74,7 +74,7 @@ class Parser:
             return in_obj.__dict__
         try:
             return str(in_obj)
-        except:
+        except Exception:
             return repr(in_obj)
 
     @staticmethod

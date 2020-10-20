@@ -127,7 +127,6 @@ class TestSet:
                         testcase_object.parse(sub_testcase_node)
                         group_object.testcase_list = testcase_object
 
-
                 elif key == YamlKeyWords.BENCHMARK:
                     ...
 
@@ -201,6 +200,7 @@ class TestResult:
     @property
     def headers(self):
         return self.__headers
+
     @headers.setter
     def headers(self, value):
         self.__headers = value
@@ -283,6 +283,10 @@ class TestCase:
         return self.__group
 
     @property
+    def is_passed(self):
+        return bool(self.__passed)
+
+    @property
     def url(self):
         val = self.realize_template("url", self.__context)
         if val is None:
@@ -329,6 +333,7 @@ class TestCase:
                 raise BindError("Cannot define multiple extractors for given variable name")
             for extractor_type, extractor_config in extractor.items():
                 self.__extract_binds_dict[variable_name] = parse_extractor(extractor_type, extractor_config)
+
     @property
     def expected_http_status_code_list(self):
         return [int(x) for x in self.__expected_http_status_code_list]
@@ -336,6 +341,7 @@ class TestCase:
     @expected_http_status_code_list.setter
     def expected_http_status_code_list(self, value):
         self.__expected_http_status_code_list = value
+
     @property
     def validators(self):
         return self.__validator_list
@@ -381,7 +387,6 @@ class TestCase:
             self.__header_dict.update(config_value)
         else:
             raise ValidatorError("Illegal header type: headers must be a dictionary or list of dictionary keys")
-
 
     def set_template(self, variable_name, template_string):
         self.templates[variable_name] = string.Template(str(template_string))
@@ -449,7 +454,7 @@ class TestCase:
             elif keyword == TestCaseKeywords.generator_binds:
                 self.__generator_binds_dict = {str(k): str(v) for k, v in flatten_dictionaries(value)}
             elif keyword == TestCaseKeywords.options:
-                raise NotImplemented("Yet to Support")
+                raise NotImplementedError("Yet to Support")
             elif keyword == TestCaseKeywords.body:
                 self.body = value
 
@@ -506,7 +511,7 @@ class TestCase:
 
         return failure_list
 
-    def run(self, context=None, timeout=None, curl_handler=None, ):
+    def run(self, context=None, timeout=None, curl_handler=None):
 
         if context is None:
             context = self.__context

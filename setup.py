@@ -35,7 +35,7 @@ setup(
     tests_require=test_dependencies,
     test_suite="py3resttest.tests",
     entry_points={
-        'console_scripts': ['resttest=py3resttest.resttest:command_line_run'],
+        'console_scripts': ['resttest3=py3resttest.runner:main'],
     }
 
 )
