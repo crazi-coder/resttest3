@@ -5,7 +5,7 @@ import types
 Basic context implementation for binding variables to values
 """
 
-logger = logging.getLogger('py3resttest.binding')
+logger = logging.getLogger('py3resttest')
 
 
 class Context(object):
@@ -19,11 +19,11 @@ class Context(object):
         """ Bind a named variable to a value within the context
             This allows for passing in variables in testing """
         str_name = str(variable_name)
-        prev = self.variables.get(str_name)
+        prev = Context.variables.get(str_name)
         if prev != variable_value:
-            self.variables[str(variable_name)] = variable_value
-            self.mod_count = self.mod_count + 1
-            # logging.debug('Context: altered variable named {0} to value {1}'.format(str_name, variable_value))
+            Context.variables[str(variable_name)] = variable_value
+            Context.mod_count = Context.mod_count + 1
+            logger.info('Context: altered variable named {0} to value {1}'.format(str_name, variable_value))
 
     def bind_variables(self, variable_map):
         for key, value in variable_map.items():
@@ -37,36 +37,36 @@ class Context(object):
             raise ValueError(
                 'Cannot add generator named {0}, it is not a generator type'.format(generator_name))
 
-        self.generators[str(generator_name)] = generator
-        # logging.debug('Context: Added generator named {0}'.format(generator_name))
+        Context.generators[str(generator_name)] = generator
+        logging.debug('Context: Added generator named {0}'.format(generator_name))
 
     def bind_generator_next(self, variable_name, generator_name):
         """ Binds the next value for generator_name to variable_name and return value used """
         str_gen_name = str(generator_name)
         str_name = str(variable_name)
-        val = next(self.generators[str_gen_name])
+        val = next(Context.generators[str_gen_name])
 
-        prev = self.variables.get(str_name)
+        prev = Context.variables.get(str_name)
         if prev != val:
-            self.variables[str_name] = val
-            self.mod_count = self.mod_count + 1
-            # Logging is /expensive/
-            # logging.debug('Context: Set variable named {0} to next value {1} from generator named {2}'.format(variable_name, val, generator_name))
+            Context.variables[str_name] = val
+            Context.mod_count = Context.mod_count + 1
+            logging.debug('Context: Set variable named {0} to next value {1} from generator named {2}'.format(variable_name, val, generator_name))
         return val
 
-    def get_values(self):
-        return self.variables
+    @staticmethod
+    def get_values():
+        return Context.variables
 
-    def get_value(self, variable_name):
+    @staticmethod
+    def get_value(variable_name):
         """ Get bound variable value, or return none if not set """
-        return self.variables.get(str(variable_name))
+        return Context.variables.get(str(variable_name))
 
-    def get_generators(self):
-        return self.generators
+    @staticmethod
+    def get_generators():
+        return Context.generators
 
-    def get_generator(self, generator_name):
-        return self.generators.get(str(generator_name))
+    @staticmethod
+    def get_generator(generator_name):
+        return Context.generators.get(str(generator_name))
 
-    def __init__(self):
-        self.variables = dict()
-        self.generators = dict()

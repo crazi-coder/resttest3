@@ -3,9 +3,10 @@ import math
 
 import pycurl
 
-from py3resttest.constants import DEFAULT_TIMEOUT
-from py3resttest.parsing import *
-from py3resttest.testcase import Test, coerce_to_string
+from .constants import DEFAULT_TIMEOUT
+from .parsing import flatten_dictionaries, lowercase_keys
+
+from .testcase import Test, coerce_to_string, safe_to_json
 
 """
 Encapsulates logic related to benchmarking

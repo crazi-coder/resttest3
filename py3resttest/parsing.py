@@ -29,7 +29,7 @@ def safe_to_json(in_obj):
     if isinstance(in_obj, bytearray):
         return str(in_obj)
     if hasattr(in_obj, '__dict__'):
-        return in_obj.__dict__
+        return {k: v for k, v in in_obj.__dict__.items() if not k.startswith("___")}
     try:
         return str(in_obj)
     except:

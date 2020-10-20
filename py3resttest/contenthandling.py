@@ -1,6 +1,7 @@
 import os
+import string
 
-from py3resttest.parsing import *
+from py3resttest.parsing import safe_substitute_unicode_template, lowercase_keys, flatten_dictionaries
 
 """
 Encapsulates contend handling logic, for pulling file content into tests

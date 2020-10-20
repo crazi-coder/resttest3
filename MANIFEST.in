@@ -1,5 +1,6 @@
 include *.yaml
 include LICENSE
+include requirements.txt
 global-exclude *.pyc
 global-exclude test_*.py
 include setup.py

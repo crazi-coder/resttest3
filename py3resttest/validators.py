@@ -6,7 +6,7 @@ import re
 import string
 import traceback
 
-from py3resttest import parsing
+from py3resttest.parsing import flatten_dictionaries, lowercase_keys
 
 """
 Validator/Extractor logic for utility use
@@ -169,8 +169,8 @@ class AbstractExtractor(object):
 
     def extract(self, body=None, headers=None, context=None):
         """ Extract data """
+
         query = self.templated_query(context=context)
-        args = self.args
         return self.extract_internal(query=query, body=body, headers=headers, args=self.args)
 
     def templated_query(self, context=None):
@@ -185,7 +185,6 @@ class AbstractExtractor(object):
         query = self.templated_query(context=context)
         output = 'Extractor Type: {0},  Query: "{1}", Templated?: {2}'.format(
             self.extractor_type, query, self.is_templated)
-        args_string = None
         if self.args:
             args_string = ", Args: " + str(self.args)
             output = output + args_string
@@ -197,6 +196,7 @@ class AbstractExtractor(object):
         """
 
         if isinstance(config, dict):
+            print(config)
             try:
                 config = config['template']
                 extractor_base.is_templated = True
@@ -254,7 +254,6 @@ class MiniJsonExtractor(AbstractExtractor):
     def parse(cls, config):
         base = MiniJsonExtractor()
         return cls.configure_base(config, base)
-        return base
 
 
 class HeaderExtractor(AbstractExtractor):
@@ -394,7 +393,7 @@ class ComparatorValidator(AbstractValidator):
         """
 
         output = ComparatorValidator()
-        config = parsing.lowercase_keys(parsing.flatten_dictionaries(config))
+        config = lowercase_keys(flatten_dictionaries(config))
         output.config = config
 
         # Extract functions are called by using defined extractor names
@@ -424,7 +423,7 @@ class ComparatorValidator(AbstractValidator):
         if isinstance(expected, str) or isinstance(expected, (int, float, complex)):
             output.expected = expected
         elif isinstance(expected, dict):
-            expected = parsing.lowercase_keys(expected)
+            expected = lowercase_keys(expected)
             template = expected.get('template')
             if template:  # Templated string
                 if not isinstance(template, str):
@@ -456,7 +455,7 @@ class ExtractTestValidator(AbstractValidator):
     @staticmethod
     def parse(config):
         output = ExtractTestValidator()
-        config = parsing.lowercase_keys(parsing.flatten_dictionaries(config))
+        config = lowercase_keys(flatten_dictionaries(config))
         output.config = config
         extractor = _get_extractor(config)
         output.extractor = extractor

@@ -37,7 +37,7 @@ Module responsibilities:
 - Collect and report on test/benchmark results
 - Perform analysis on benchmark results
 """
-HEADER_ENCODING = 'ISO-8859-1'  # Per RFC 2616
+
 LOGGING_LEVELS = {'debug': logging.DEBUG,
                   'info': logging.INFO,
                   'warning': logging.WARNING,
@@ -47,7 +47,7 @@ LOGGING_LEVELS = {'debug': logging.DEBUG,
 logging.basicConfig(format='%(levelname)s:%(message)s')
 logger = logging.getLogger('py3resttest')
 
-DIR_LOCK = threading.RLock()  # Guards operations changing the working directory
+
 
 
 class cd:
@@ -92,9 +92,10 @@ class TestConfig:
 
 class TestSet:
     """ Encapsulates a set of tests and test configuration for them """
-    tests = []
-    benchmarks = []
-    config = TestConfig()
+
+    # tests = []
+    # benchmarks = []
+    # config = TestConfig()
 
     def __init__(self):
         self.config = TestConfig()
@@ -108,33 +109,84 @@ class TestSet:
 class BenchmarkResult:
     """ Stores results from a benchmark for reporting use """
     group = None
-    name = u'unnamed'
+    name = 'unnamed'
 
-    results = {}  # Benchmark output, map the metric to the result array for that metric
-    aggregates = {}  # List of aggregates, as tuples of (metricname, aggregate, result)
-    failures = 0  # Track call count that failed
+    # results = {}  # Benchmark output, map the metric to the result array for that metric
+    # aggregates = {}  # List of aggregates, as tuples of (metricname, aggregate, result)
+    # failures = 0  # Track call count that failed
 
     def __init__(self):
-        self.aggregates = list()
-        self.results = list()
+        self.aggregates = []
+        self.results = []
+        self.failures = 0
 
     def __str__(self):
         return json.dumps(self, default=safe_to_json)
 
 
-class TestResponse:
-    """ Encapsulates everything about a test response """
-    test = None  # Test run
-    response_code = None
-
-    body = None  # Response body, if tracked
-
-    passed = False
-    response_headers = None
-    failures = None
+class TestResult:
 
     def __init__(self):
-        self.failures = list()
+        self.__failures = []
+        self.__body = None
+        self.__passed = False
+        self.__test = None
+        self.__response_code = None
+        self.__response_headers = None
+
+    @property
+    def passed(self):
+        return self.__passed
+
+    @passed.setter
+    def passed(self, is_passed):
+        self.__passed = is_passed
+
+    @property
+    def failures(self):
+        return self.__failures
+
+    @failures.setter
+    def failures(self, failed_data):
+        self.__failures.append(failed_data)
+
+    @property
+    def test(self) -> Test:
+        return self.__test
+
+    @test.setter
+    def test(self, testcase_object: Test):
+        if self.__test is not None:
+            raise UserWarning("Testcase is already set")
+        self.__test = testcase_object
+
+    @property
+    def body(self):
+        return self.__body
+
+    @body.setter
+    def body(self, api_response_body):
+        if isinstance(api_response_body, bytes):
+            api_response_body = api_response_body.decode()
+        self.__body = api_response_body
+
+    @property
+    def response_code(self):
+        return self.__response_code
+
+    @response_code.setter
+    def response_code(self, status_code):
+        self.__response_code = int(status_code)
+
+    @property
+    def response_headers(self):
+        return self.__response_headers
+
+    @response_headers.setter
+    def response_headers(self, headers):
+        if isinstance(headers, bytes):
+            headers = headers.decode()
+        self.__response_headers = headers
 
     def __str__(self):
         return json.dumps(self, default=safe_to_json)
@@ -265,7 +317,7 @@ def read_file(path):
     return string
 
 
-def run_test(testcase, test_config=TestConfig(), context=None, curl_handle=None, *args, **kwargs):
+def run_test(testcase, test_config=TestConfig(), context=None, curl_handle=None, *args, **kwargs) -> TestResult:
     """ Put together test pieces: configure & run actual test, return results """
 
     # Initialize a context if not supplied
@@ -276,8 +328,8 @@ def run_test(testcase, test_config=TestConfig(), context=None, curl_handle=None,
     templated_test = testcase.realize(context)
     curl = templated_test.configure_curl(
         timeout=test_config.timeout, context=context, curl_handle=curl_handle)
-    result = TestResponse()
-    result.test = templated_test
+    test_result_object = TestResult()
+    test_result_object.test = templated_test
 
     # reset the body, it holds values from previous runs otherwise
     headers = BytesIO()
@@ -289,8 +341,6 @@ def run_test(testcase, test_config=TestConfig(), context=None, curl_handle=None,
     if test_config.ssl_insecure:
         curl.setopt(pycurl.SSL_VERIFYPEER, 0)
         curl.setopt(pycurl.SSL_VERIFYHOST, 0)
-
-    result.passed = None
 
     if test_config.interactive:
         print("===================================")
@@ -315,62 +365,65 @@ def run_test(testcase, test_config=TestConfig(), context=None, curl_handle=None,
         # Curl exception occurred (network error), do not pass go, do not
         # collect $200
         trace = traceback.format_exc()
-        result.failures.append(Failure(message="Curl Exception: {0}".format(
-            e), details=trace, failure_type=validators.FAILURE_CURL_EXCEPTION))
-        result.passed = False
+        test_result_object.failures = Failure(
+            message="Curl Exception: {0}".format(e),
+            details=trace,
+            failure_type=validators.FAILURE_CURL_EXCEPTION
+        )
+        test_result_object.passed = False
         curl.close()
-        return result
+        return test_result_object
 
     # Retrieve values
-    result.body = body.getvalue()
+    test_result_object.body = body.getvalue()
     body.close()
-    result.response_headers = str(headers.getvalue(), HEADER_ENCODING)  # Per RFC 2616
+    test_result_object.response_headers = headers.getvalue()
     headers.close()
 
     response_code = curl.getinfo(pycurl.RESPONSE_CODE)
-    result.response_code = response_code
+    test_result_object.response_code = response_code
 
     logger.debug("Initial Test Result, based on expected response code: " +
                  str(response_code in testcase.expected_status))
 
     if response_code in testcase.expected_status:
-        result.passed = True
+        test_result_object.passed = True
     else:
         # Invalid response code
-        result.passed = False
+        test_result_object.passed = False
         failure_message = "Invalid HTTP response code: response code {0} not in expected codes [{1}]".format(
             response_code, testcase.expected_status)
-        result.failures.append(Failure(
+        test_result_object.failures.append(Failure(
             message=failure_message, details=None, failure_type=validators.FAILURE_INVALID_RESPONSE))
 
     # Parse HTTP headers
     try:
-        result.response_headers = parse_headers(result.response_headers)
+        test_result_object.response_headers = parse_headers(test_result_object.response_headers)
     except Exception as e:
         trace = traceback.format_exc()
-        result.failures.append(Failure(message="Header parsing exception: {0}".format(
+        test_result_object.failures.append(Failure(message="Header parsing exception: {0}".format(
             e), details=trace, failure_type=validators.FAILURE_TEST_EXCEPTION))
-        result.passed = False
+        test_result_object.passed = False
         curl.close()
-        return result
+        return test_result_object
 
     # print str(test_config.print_bodies) + ',' + str(not result.passed) + ' ,
     # ' + str(test_config.print_bodies or not result.passed)
 
-    head = result.response_headers
+    head = test_result_object.response_headers
 
     # execute validator on body
-    if result.passed is True:
-        body = result.body
+    if test_result_object.passed is True:
+        body = test_result_object.body
         if testcase.validators is not None and isinstance(testcase.validators, list):
             logger.debug("executing this many validators: " +
                          str(len(testcase.validators)))
-            failures = result.failures
+            failures = test_result_object.failures
             for validator in testcase.validators:
                 validate_result = validator.validate(
                     body=body, headers=head, context=context)
                 if not validate_result:
-                    result.passed = False
+                    test_result_object.passed = False
                 # Proxy for checking if it is a Failure object, because of
                 # import issues with isinstance there
                 if hasattr(validate_result, 'details'):
@@ -380,24 +433,24 @@ def run_test(testcase, test_config=TestConfig(), context=None, curl_handle=None,
             logger.debug("no validators found")
 
         # Only do context updates if test was successful
-        testcase.update_context_after(result.body, head, context)
+        testcase.update_context_after(test_result_object.body, head, context)
 
     # Print response body if override is set to print all *OR* if test failed
     # (to capture maybe a stack trace)
-    if test_config.print_bodies or not result.passed:
+    if test_config.print_bodies or not test_result_object.passed:
         if test_config.interactive:
             print("RESPONSE:")
-        print(result.body.decode(ESCAPE_DECODING))
+        print(test_result_object.body.decode(ESCAPE_DECODING))
 
-    if test_config.print_headers or not result.passed:
+    if test_config.print_headers or not test_result_object.passed:
         if test_config.interactive:
             print("RESPONSE HEADERS:")
-        print(result.response_headers)
+        print(test_result_object.response_headers)
 
     # TODO add string escape on body output
-    logger.debug(result)
+    logger.debug(test_result_object)
 
-    return result
+    return test_result_object
 
 
 def run_benchmark(benchmark, test_config=TestConfig(), context=None, *args, **kwargs):
@@ -418,7 +471,7 @@ def run_benchmark(benchmark, test_config=TestConfig(), context=None, *args, **kw
         raise Exception(
             "Invalid number of benchmark runs, must be > 0 :" + benchmark_runs)
 
-    result = TestResponse()
+    result = TestResult()
 
     # TODO create and use a curl-returning configuration function
     # TODO create and use a post-benchmark cleanup function
