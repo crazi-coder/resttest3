@@ -305,7 +305,7 @@ class ComparatorValidator(AbstractValidator):
     comparator = None
     comparator_name = ""
     expected = None
-    isTemplateExpected = False
+    is_template_expected = False
 
     def get_readable_config(self, context=None):
         """ Get a human-readable config string """
@@ -315,7 +315,7 @@ class ComparatorValidator(AbstractValidator):
         if isinstance(self.expected, AbstractExtractor):
             string_frags.append("Expected value extractor: " +
                                 self.expected.get_readable_config(context=context))
-        elif self.isTemplateExpected:
+        elif self.is_template_expected:
             string_frags.append(
                 'Expected is templated, raw value: {0}'.format(self.expected))
         return os.linesep.join(string_frags)
@@ -333,12 +333,12 @@ class ComparatorValidator(AbstractValidator):
         expected_val = None
         if isinstance(self.expected, AbstractExtractor):
             try:
-                self.expected.extract(body=body, headers=headers, context=context)
+                expected_val = self.expected.extract(body=body, headers=headers, context=context)
             except Exception:
                 trace = traceback.format_exc()
                 return Failure(message="Expected value extractor threw exception", details=trace, validator=self,
                                failure_type=FAILURE_EXTRACTOR_EXCEPTION)
-        elif self.isTemplateExpected and context:
+        elif self.is_template_expected and context:
             expected_val = string.Template(
                 self.expected).safe_substitute(context.get_values())
         else:
@@ -401,13 +401,14 @@ class ComparatorValidator(AbstractValidator):
         if isinstance(expected, str) or isinstance(expected, (int, float, complex)):
             output.expected = expected
         elif isinstance(expected, dict):
+
             expected = lowercase_keys(expected)
             template = expected.get('template')
             if template:  # Templated string
                 if not isinstance(template, str):
                     raise ValueError(
                         "Can't template a comparator-validator unless template value is a string")
-                output.isTemplateExpected = True
+                output.is_template_expected = True
                 output.expected = template
             else:  # Extractor to compare against
                 output.expected = _get_extractor(expected)

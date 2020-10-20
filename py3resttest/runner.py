@@ -30,20 +30,19 @@ class ArgsRunner:
 
     def args(self):
         parser = ArgumentParser(description='usage: %prog base_url test_filename.yaml [options]')
-        parser.add_argument("--log", help="Logging level", action="store", type=str,
-                            choices=["info", "error", "warning", "debug"])
-        parser.add_argument("--interactive", help="Interactive mode", action="store", type=str)
-        parser.add_argument("--url", help="Base URL to run tests against", action="store", type=str)
-        parser.add_argument("--test", help="Test file to use", action="store", type=str)
-        parser.add_argument(u'--extensions', help='Extensions to import, separated by semicolons',
-                            nargs='+', type=str)
-        parser.add_argument('--vars', help='Variables to set, as a YAML dictionary', action="store", type=str)
-        parser.add_argument(u'--insecure', help='Disable cURL host and peer cert verification', action='store_true',
-                            default=False)
-        parser.add_argument(u'--absolute_urls', help='Enable absolute URLs in tests instead of relative paths',
-                            action="store_true")
-        parser.add_argument(u'--skip_term_colors', help='Turn off the output term colors',
-                            action='store_true', default=False)
+        # parser.add_argument("--log", help="Logging level", action="store", type=str,
+        #                     choices=["info", "error", "warning", "debug"])
+        #parser.add_argument("--interactive", help="Interactive mode", action="store", type=str)
+        parser.add_argument("--url", help="Base URL to run tests against", action="store", type=str, required=True)
+        parser.add_argument("--test", help="Test file to use", action="store", type=str, required=True)
+        #parser.add_argument(u'--extensions', help='Extensions to import, separated by semicolons', nargs='+', type=str)
+        #parser.add_argument('--vars', help='Variables to set, as a YAML dictionary', action="store", type=str)
+        # parser.add_argument(u'--insecure', help='Disable cURL host and peer cert verification', action='store_true',
+        #                     default=False)
+        # parser.add_argument(u'--absolute_urls', help='Enable absolute URLs in tests instead of relative paths',
+        #                     action="store_true")
+        # parser.add_argument(u'--skip_term_colors', help='Turn off the output term colors',
+        #                     action='store_true', default=False)
 
         parser.parse_args(namespace=self)
 
@@ -103,3 +102,7 @@ class Runner:
 def main():
     r = Runner()
     r.main()
+
+
+if __name__ == '__main__':
+    main()
