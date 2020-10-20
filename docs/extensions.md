@@ -34,7 +34,7 @@ def parse_generator_doubling(config):
     # We cannot simply use start as the variable, because of scoping limitations
     def generator():
         val = start
-        while(True):
+        while True:
             yield val
             val = val*2
     return generator()
