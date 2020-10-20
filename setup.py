@@ -11,7 +11,7 @@ setup(
     version='1.0.0.dev',
     description='Python RESTful API Testing & Micro benchmarking Tool',
     long_description='Python RESTful API Testing & Microbenchmarking Tool '
-                     '\n Documentation at https://github.com/svanoort/pyresttest',
+                     '\n Documentation at https://github.com/abhijo89-to/py3resttest',
     author='Abhilash Joseph C',
     author_email='abhilash@softlinkweb.com',
     url='https://github.com/abhijo89-to/py3resttest',
