@@ -62,7 +62,6 @@ METRICS = {
 }
 
 # Map statistical aggregate to the function to use to perform the
-# aggregation on an array
 AGGREGATES = {
     'mean_arithmetic': lambda x: float(sum(x)) / float(len(x)),
     'mean': lambda x: float(sum(x)) / float(len(x)),
