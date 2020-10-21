@@ -102,15 +102,15 @@ class Runner:
                             failure_dict[test_group] = (count + 1, case_list)
                         except KeyError:
                             failure_dict[test_group] = (1, [testcase_object])
-            print("========== TEST RESULT ===========")
-            for group_name, case_list_tuple in failure_dict.items():
-                print("%sGroup Name: %s %s" % (self.FAIL, group_name, self.NOCOL))
-                count, courtcase_list = case_list_tuple
-                print('%sTotal testcase failed: %s %s' % (self.FAIL, count, self.NOCOL))
-                for index, testcase in enumerate(courtcase_list):
-                    print('\t%s %s. Case Name: %s %s' % (self.FAIL, index+1, testcase.name, self.NOCOL))
-                    for f in testcase.failures:
-                        print('\t\t%s %s %s' % (self.FAIL, f, self.NOCOL))
+        print("========== TEST RESULT ===========")
+        for group_name, case_list_tuple in failure_dict.items():
+            print("%sGroup Name: %s %s" % (self.FAIL, group_name, self.NOCOL))
+            count, courtcase_list = case_list_tuple
+            print('%sTotal testcase failed: %s %s' % (self.FAIL, count, self.NOCOL))
+            for index, testcase in enumerate(courtcase_list):
+                print('\t%s %s. Case Name: %s %s' % (self.FAIL, index+1, testcase.name, self.NOCOL))
+                for f in testcase.failures:
+                    print('\t\t%s %s %s' % (self.FAIL, f, self.NOCOL))
 
         for group_name, case_list_tuple in success_dict.items():
             print("%sGroup Name: %s %s" % (self.SUCCESS, group_name, self.NOCOL))
