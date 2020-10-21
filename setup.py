@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-
+import py3resttest
 with open(u"requirements.txt") as fp:
     install_requires = [lib_str.strip() for lib_str in fp.read().split("\n") if not lib_str.startswith("#")]
 
@@ -8,11 +8,11 @@ with open(u"requirements.txt") as fp:
 
 setup(
     name='resttest3',
-    version='1.0.0',
+    version=py3resttest.__version__,
     description='Python RESTful API Testing & Micro benchmarking Tool',
     long_description='Python RESTful API Testing & Microbenchmarking Tool '
                      '\n Documentation at https://abhijo89-to.github.io/py3resttest/',
-    author='Abhilash Joseph C',
+    author=py3resttest.__author__,
     author_email='abhilash@softlinkweb.com',
     url='https://github.com/abhijo89-to/py3resttest',
     keywords=['rest', 'web', 'http', 'testing', 'api'],
@@ -30,6 +30,7 @@ setup(
         'Topic :: Utilities'
     ],
     packages=find_packages(),
+    python_requires='>=3.5',
     license='Apache License, Version 2.0',
     install_requires=install_requires,
     tests_require=test_dependencies,
