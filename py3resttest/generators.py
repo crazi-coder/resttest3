@@ -46,7 +46,7 @@ def factory_generate_ids(starting_id=1, increment=1):
     def generate_started_ids():
         val = starting_id
         local_increment = increment
-        while (True):
+        while True:
             yield val
             val += local_increment
 
@@ -88,7 +88,7 @@ def factory_fixed_sequence(values):
     def seq_generator():
         my_list = list(values)
         i = 0
-        while (True):
+        while True:
             yield my_list[i]
             if i == len(my_list):
                 i = 0
@@ -154,7 +154,7 @@ def factory_env_string(env_string):
 def parse_random_text_generator(configuration):
     """ Parses configuration options for a random text generator """
     character_set = configuration.get(u'character_set')
-    characters = None
+
     if character_set:
         character_set = character_set.lower()
         if character_set not in CHARACTER_SETS:
@@ -228,11 +228,11 @@ def parse_generator(configuration):
             'Generator type given {0} is not valid '.format(gen_type))
 
     # Do the easy parsing, delegate more complex logic to parsing functions
-    if gen_type == u'env_variable':
-        return factory_env_variable(configuration[u'variable_name'])()
-    elif gen_type == u'env_string':
-        return factory_env_string(configuration[u'string'])()
-    elif gen_type == u'number_sequence':
+    if gen_type == 'env_variable':
+        return factory_env_variable(configuration['variable_name'])()
+    elif gen_type == 'env_string':
+        return factory_env_string(configuration['string'])()
+    elif gen_type == 'number_sequence':
         start = configuration.get('start')
         increment = configuration.get('increment')
         if not start:
@@ -244,9 +244,9 @@ def parse_generator(configuration):
         else:
             increment = int(increment)
         return factory_generate_ids(start, increment)()
-    elif gen_type == u'random_int':
+    elif gen_type == 'random_int':
         return generator_random_int32()
-    elif gen_type == u'random_text':
+    elif gen_type == 'random_text':
         return parse_random_text_generator(configuration)
     elif gen_type in GENERATOR_TYPES:
         return GENERATOR_PARSING[gen_type](configuration)

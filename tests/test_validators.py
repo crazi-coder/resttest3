@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
+from py3resttest.constants import safe_length
 from py3resttest import validators
 from py3resttest.binding import Context
 from py3resttest.validators import register_extractor
@@ -110,11 +111,11 @@ class ValidatorsTest(unittest.TestCase):
             pass
 
     def test_safe_length(self):
-        self.assertEqual(1, validators.safe_length('s'))
-        self.assertEqual(2, validators.safe_length(['text', 2]))
-        self.assertEqual(2, validators.safe_length({'key': 'val', 1: 2}))
-        self.assertEqual(-1, validators.safe_length(False))
-        self.assertEqual(-1, validators.safe_length(None))
+        self.assertEqual(1, safe_length('s'))
+        self.assertEqual(2, safe_length(['text', 2]))
+        self.assertEqual(2, safe_length({'key': 'val', 1: 2}))
+        self.assertEqual(-1, safe_length(False))
+        self.assertEqual(-1, safe_length(None))
 
     def test_validatortest_exists(self):
         func = validators.VALIDATOR_TESTS['exists']
@@ -264,16 +265,16 @@ class ValidatorsTest(unittest.TestCase):
         query = 'content-type'
         extractor = validators.parse_extractor('header', query)
         self.assertTrue(isinstance(extractor, validators.HeaderExtractor))
-        self.assertTrue(extractor.is_header_extractor)
-        self.assertFalse(extractor.is_body_extractor)
+        self.assertTrue(extractor._is_header_extractor)
+        self.assertFalse(extractor._is_body_extractor)
 
     def test_raw_body_extractor(self):
         query = ''
         extractor = validators.parse_extractor('raw_body', None)
         extractor = validators.parse_extractor('raw_body', query)
         self.assertTrue(isinstance(extractor, validators.RawBodyExtractor))
-        self.assertTrue(extractor.is_body_extractor)
-        self.assertFalse(extractor.is_header_extractor)
+        self.assertTrue(extractor._is_body_extractor)
+        self.assertFalse(extractor._is_header_extractor)
 
         bod = u'j1j21io312j3'
         val = extractor.extract(body=bod, headers='')
@@ -285,7 +286,11 @@ class ValidatorsTest(unittest.TestCase):
 
     def test_abstract_extractor_parse(self):
         """ Test parsing a basic abstract extractor """
-        ext = validators.AbstractExtractor()
+        class A(validators.AbstractExtractor):
+            def extract_internal(self, query=None, body=None, headers=None, args=None):
+                ...
+
+        ext = A()
         ext = validators.AbstractExtractor.configure_base('val', ext)
         self.assertEqual('val', ext.query)
         self.assertEqual(False, ext.is_templated)
@@ -296,10 +301,15 @@ class ValidatorsTest(unittest.TestCase):
 
     def test_abstract_extractor_string(self):
         """ Test abstract extractor to_string method """
-        ext = validators.AbstractExtractor()
+
+        class A(validators.AbstractExtractor):
+            def extract_internal(self, query=None, body=None, headers=None, args=None):
+                ...
+
+        ext = A()
         ext.is_templated = True
-        ext.is_header_extractor = True
-        ext.is_body_extractor = True
+        ext._is_header_extractor = True
+        ext._is_body_extractor = True
         ext.query = 'gooblyglah'
         ext.extractor_type = 'bleh'
         ext.args = {'cheesy': 'poofs'}
@@ -310,7 +320,12 @@ class ValidatorsTest(unittest.TestCase):
 
     def test_abstract_extractor_templating(self):
         """ Test that abstract extractors template the query """
-        ext = validators.AbstractExtractor()
+
+        class A(validators.AbstractExtractor):
+            def extract_internal(self, query=None, body=None, headers=None, args=None):
+                ...
+
+        ext = A()
         ext.query = '$val.vee'
         ext.is_templated = True
         context = Context()
@@ -318,7 +333,7 @@ class ValidatorsTest(unittest.TestCase):
         self.assertEqual('$val.vee', ext.templated_query())
         self.assertEqual('foo.vee', ext.templated_query(context=context))
 
-        ext.is_templated = False
+        ext._is_templated = False
         self.assertEqual('$val.vee', ext.templated_query(context=context))
 
     def test_abstract_extractor_readableconfig(self):
@@ -393,6 +408,14 @@ class ValidatorsTest(unittest.TestCase):
         context.bind_variable('node', 'val')
         comp = validator.validate(myjson, context=context)
 
+    def test_parse_wrong_comparator(self):
+        config = {
+            'jsonpath_mini': 'key.val',
+            'comparator': 'eq1',
+            'expected': 3
+        }
+        self.assertRaises(ValueError, validators.parse_validator, 'comparator', config)
+
     def test_parse_validator_nocomparator(self):
         """ Test that comparator validator with no comparator defaults to eq """
         config = {
@@ -459,7 +482,7 @@ class ValidatorsTest(unittest.TestCase):
         """ Basic test of the inequality validator alias"""
         config = {
             'jsonpath_mini': 'key.val',
-            'comparator': 'not_equals',
+            'comparator': 'ne',
             'expected': 3
         }
         comp_validator = validators.ComparatorValidator.parse(config)
@@ -563,13 +586,13 @@ class ValidatorsTest(unittest.TestCase):
             'jsonpath_mini': 'key.val',
             'test': 'exists'
         }
-        myjson_pass = '{"id": 3, "key": {"val": 3}}'
-        myjson_fail = '{"id": 3, "key": {"valley": "wide"}}'
+        json_pass = '{"id": 3, "key": {"val": 3}}'
+        json_fail = '{"id": 3, "key": {"valley": "wide"}}'
         validator = validators.ExtractTestValidator.parse(config)
-        validation_result = validator.validate(body=myjson_pass)
+        validation_result = validator.validate(body=json_pass)
         self.assertTrue(validation_result)
-
-        validation_result = validator.validate(body=myjson_fail)
+        validator = validators.ExtractTestValidator.parse(config)
+        validation_result = validator.validate(body=json_fail)
         self.assertFalse(validation_result)
         self.assertTrue(isinstance(validation_result, validators.Failure))
         self.assertEqual(validation_result.message,

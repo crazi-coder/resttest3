@@ -1,3 +1,4 @@
+alive_progress
 pyyaml
 pycurl
 jsonpath
