@@ -39,7 +39,6 @@ class ContentHandler:
             if self.is_template_path and context:
                 path = string.Template(path).safe_substitute(
                     context.get_values())
-            data = None
             with open(path, 'r') as f:
                 data = f.read()
 
@@ -63,13 +62,13 @@ class ContentHandler:
             output.content = f.read()
         return output
 
-    def setup(self, input, is_file=False, is_template_path=False, is_template_content=False):
+    def setup(self, file_path, is_file=False, is_template_path=False, is_template_content=False):
         """ Self explanatory, input is inline content or file path. """
-        if not isinstance(input, str):
+        if not isinstance(file_path, str):
             raise TypeError("Input is not a string")
         if is_file:
-            input = os.path.abspath(input)
-        self.content = input
+            file_path = os.path.abspath(file_path)
+        self.content = file_path
         self.is_file = is_file
         self.is_template_path = is_template_path
         self.is_template_content = is_template_content
@@ -94,7 +93,7 @@ class ContentHandler:
         is_file = False
         is_done = False
 
-        while (node and not is_done):  # Dive through the configuration tree
+        while node and not is_done:  # Dive through the configuration tree
             # Finally we've found the value!
             if isinstance(node, str):
                 output.content = node
@@ -110,7 +109,7 @@ class ContentHandler:
             # Dictionary or list of dictionaries
             flat = lowercase_keys(flatten_dictionaries(node))
             for key, value in flat.items():
-                if key == u'template':
+                if key == 'template':
                     if isinstance(value, str):
                         if is_file:
                             value = os.path.abspath(value)

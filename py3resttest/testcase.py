@@ -11,13 +11,15 @@ import pycurl
 from pathlib import Path
 
 from py3resttest.binding import Context
-from py3resttest.constants import AuthType, YamlKeyWords, TestCaseKeywords, DEFAULT_TIMEOUT, EnumHttpMethod
+from py3resttest.constants import (
+    AuthType, YamlKeyWords, TestCaseKeywords, DEFAULT_TIMEOUT, EnumHttpMethod, FAILURE_CURL_EXCEPTION,
+    FAILURE_TEST_EXCEPTION, FAILURE_INVALID_RESPONSE
+)
 from py3resttest.contenthandling import ContentHandler
 from py3resttest.exception import HttpMethodError, BindError, ValidatorError
 from py3resttest.parsing import safe_to_json, lowercase_keys, flatten_dictionaries
 from py3resttest.utils import read_testcase_file, ChangeDir, Parser
-from py3resttest.validators import parse_extractor, parse_validator, FAILURE_CURL_EXCEPTION, Failure, \
-    FAILURE_INVALID_RESPONSE, FAILURE_TEST_EXCEPTION
+from py3resttest.validators import parse_extractor, parse_validator, Failure
 
 logger = logging.getLogger('py3resttest')
 

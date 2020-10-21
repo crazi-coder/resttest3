@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from alive_progress import alive_bar
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, List
@@ -17,7 +18,7 @@ logging.basicConfig(format='%(levelname)s:%(message)s')
 class ArgsRunner:
 
     def __init__(self):
-        self.log = logging.INFO
+        self.log = logging.ERROR
         self.interactive = None
         self.url = None
         self.test = None
@@ -49,6 +50,10 @@ class ArgsRunner:
 
 class Runner:
 
+    FAIL = '\033[91m'
+    SUCCESS = '\033[92m'
+    NOCOL = '\033[0m'
+
     def __init__(self):
         self.__args = ArgsRunner()
 
@@ -73,29 +78,46 @@ class Runner:
         test_case_dict = self.read_test_file(p.absolute())
         testcase_set = TestSet()
         testcase_set.parse(self.__args.url, testcase_list=test_case_dict, working_directory=p.parent.absolute())
-        logger.info("Total %s group found" % len(testcase_set.test_group_list_dict))
-        for test_group, test_group_object in testcase_set.test_group_list_dict.items():
-            logger.info("Running Group %s" % test_group)
-            for testcase_object in test_group_object.testcase_list:
-                logger.info("Running test %s ..." % testcase_object.name)
-                testcase_object.run()
 
-        logger.info("TEST RESULT")
-        for test_group, test_group_object in testcase_set.test_group_list_dict.items():
-            logger.info("Result for Group %s" % test_group)
-            for testcase_object in test_group_object.testcase_list:
-                if testcase_object.failures:
-                    for failure in testcase_object.failures:
-                        if testcase_object.is_passed:
-                            logger.info("%s Success: %s" % (testcase_object.name, failure))
-                        else:
-                            logger.info("%s Failed: %s" % (testcase_object.name, failure))
-                            logger.warning("%s BODY: %s" % (testcase_object.name, testcase_object.body))
-                            logger.warning("%s HEADER: %s" % (testcase_object.name, testcase_object.headers))
+        success_dict = {}
+        failure_dict = {}
+        total_testcase_count = len([y for x, y in testcase_set.test_group_list_dict.items() for c in y.testcase_list])
+        with alive_bar(total_testcase_count) as bar:
+            for test_group, test_group_object in testcase_set.test_group_list_dict.items():
 
-                else:
-                    logger.info("Success: %s " % testcase_object.name)
+                for testcase_object in test_group_object.testcase_list:
+                    bar()
+                    testcase_object.run()
+                    if testcase_object.is_passed:
+                        try:
+                            (count, case_list) = success_dict[test_group]
+                            case_list.append(testcase_object)
+                            success_dict[test_group] = (count + 1, case_list)
+                        except KeyError:
+                            success_dict[test_group] = (1, [testcase_object])
+                    else:
+                        try:
+                            count, case_list = failure_dict[test_group]
+                            case_list.append(testcase_object)
+                            failure_dict[test_group] = (count + 1, case_list)
+                        except KeyError:
+                            failure_dict[test_group] = (1, [testcase_object])
+        print("========== TEST RESULT ===========")
+        for group_name, case_list_tuple in failure_dict.items():
+            print("%sGroup Name: %s %s" % (self.FAIL, group_name, self.NOCOL))
+            count, courtcase_list = case_list_tuple
+            print('%sTotal testcase failed: %s %s' % (self.FAIL, count, self.NOCOL))
+            for index, testcase in enumerate(courtcase_list):
+                print('\t%s %s. Case Name: %s %s' % (self.FAIL, index+1, testcase.name, self.NOCOL))
+                for f in testcase.failures:
+                    print('\t\t%s %s %s' % (self.FAIL, f, self.NOCOL))
 
+        for group_name, case_list_tuple in success_dict.items():
+            print("%sGroup Name: %s %s" % (self.SUCCESS, group_name, self.NOCOL))
+            count, courtcase_list = case_list_tuple
+            print('%sTotal testcase failed: %s %s' % (self.SUCCESS, count, self.NOCOL))
+            for index, testcase in enumerate(courtcase_list):
+                print('\t%s %s. Case Name: %s %s' % (self.SUCCESS, index+1, testcase.name, self.NOCOL))
         return 0
 
 
