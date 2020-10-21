@@ -41,6 +41,6 @@ jobs:
           parallel: true
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Coveralls Finished
-          uses: AndreMiras/coveralls-python-action@develop
-          with:
-            parallel-finished: true
+        uses: AndreMiras/coveralls-python-action@develop
+        with:
+          parallel-finished: true
