@@ -8,7 +8,7 @@ with open(u"requirements.txt") as fp:
 
 setup(
     name='resttest',
-    version='1.0.0',
+    version='1.0.0a1',
     description='Python RESTful API Testing & Micro benchmarking Tool',
     long_description='Python RESTful API Testing & Microbenchmarking Tool '
                      '\n Documentation at https://abhijo89-to.github.io/py3resttest/',
