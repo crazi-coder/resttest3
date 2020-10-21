@@ -37,10 +37,10 @@ jobs:
           coverage run --source py3resttest -m pytest tests/test_*.py
 
       - name: Coveralls
-          uses: AndreMiras/coveralls-python-action@develop
-          with:
-            parallel: true
-            github-token: ${{ secrets.GITHUB_TOKEN }}
+        uses: AndreMiras/coveralls-python-action@develop
+        with:
+          parallel: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
     coveralls_finish:
       needs: build
