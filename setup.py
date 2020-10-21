@@ -7,8 +7,8 @@ with open(u"requirements.txt") as fp:
     test_dependencies = [lib_str.strip() for lib_str in fp.read().split("\n") if not lib_str.startswith("#")]
 
 setup(
-    name='apitest',
-    version='1.0.0a1',
+    name='resttest3',
+    version='1.0.0',
     description='Python RESTful API Testing & Micro benchmarking Tool',
     long_description='Python RESTful API Testing & Microbenchmarking Tool '
                      '\n Documentation at https://abhijo89-to.github.io/py3resttest/',
