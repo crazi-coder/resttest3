@@ -3,8 +3,9 @@ import os
 import string
 import threading
 from email import message_from_string
+from functools import reduce
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Union, List
 
 import yaml
 
@@ -53,7 +54,6 @@ class Parser:
             return my_string
         else:
             my_string = str(my_string)
-        if isinstance(my_string, str):
             my_string = my_string.encode('utf-8')
 
         return my_string
@@ -69,24 +69,23 @@ class Parser:
     @staticmethod
     def safe_to_json(in_obj):
         """ Safely get dict from object if present for json dumping """
-        if isinstance(in_obj, bytearray):
-            return str(in_obj)
-        if hasattr(in_obj, '__dict__'):
-            return in_obj.__dict__
-        try:
-            return str(in_obj)
-        except Exception:
+        if isinstance(in_obj, bytes):
+            return in_obj.decode('utf-8')
+        elif hasattr(in_obj, '__dict__'):
+            return {k: v for k, v in in_obj.__dict__.items() if not k.startswith('__')}
+        elif isinstance(in_obj, str):
+            return in_obj
+        else:
             return repr(in_obj)
 
     @staticmethod
-    def flatten_dictionaries(input_dict: Dict):
+    def flatten_dictionaries(input_dict: Union[Dict, List[Dict]]):
         """ Flatten a list of dictionaries into a single dictionary, to allow flexible YAML use
           Dictionary comprehensions can do this, but would like to allow for pre-Python 2.7 use
           If input isn't a list, just return it.... """
-        output = {}
+
         if isinstance(input_dict, list):
-            for item_dict in input_dict:
-                output.update(item_dict)
+            output = reduce(lambda d, src: d.update(src) or d, input_dict, {})
         else:
             output = input_dict
         return output
@@ -96,10 +95,19 @@ class Parser:
         """ Take input and if a dictionary, return version with keys all lowercase and cast to str """
         if not isinstance(input_dict, dict):
             return input_dict
-        safe = dict()
-        for key, value in input_dict.items():
-            safe[str(key).lower()] = value
-        return safe
+        return {str(k).lower(): v for k, v in input_dict.items()}
+
+    @staticmethod
+    def flatten_lowercase_keys_dict(input_dict: Union[Dict, List[Dict]]):
+        """ Take input and if a dictionary, return version with keys all lowercase and cast to str """
+        if isinstance(input_dict, list):
+            output_dict = Parser.flatten_dictionaries(input_dict)
+            output_dict = Parser.lowercase_keys(output_dict)
+        elif not isinstance(input_dict, dict):
+            return input_dict
+        else:
+            output_dict = Parser.lowercase_keys(input_dict)
+        return output_dict
 
     @staticmethod
     def safe_to_bool(vaule):
@@ -131,8 +139,8 @@ class Parser:
     def coerce_string_to_ascii(val):
         if isinstance(val, str):
             return val.encode('ascii')
-        elif isinstance(val, (bytes, bytearray)):
-            return val
+        elif isinstance(val, bytes):
+            return val.decode('utf-8').encode('ascii')
         else:
             raise TypeError("Input {0} is not a string, string expected".format(val))
 
@@ -162,7 +170,8 @@ class Parser:
             Note that headers are a list of (key, value) since duplicate headers are allowed
             NEW NOTE: keys & values are unicode strings, but can only contain ISO-8859-1 characters
         """
-        header_string = header_string.decode()
+        if isinstance(header_string, bytes):
+            header_string = header_string.decode()
         # First line is request line, strip it out
         if not header_string:
             return list()

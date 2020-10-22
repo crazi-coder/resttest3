@@ -1,7 +1,7 @@
 import os
 import string
 
-from py3resttest.parsing import safe_substitute_unicode_template, lowercase_keys, flatten_dictionaries
+from py3resttest.utils import Parser
 
 """
 Encapsulates contend handling logic, for pulling file content into tests
@@ -48,7 +48,7 @@ class ContentHandler:
                 return data
         else:
             if self.is_template_content and context:
-                return safe_substitute_unicode_template(self.content, context.get_values())
+                return Parser.safe_substitute_unicode_template(self.content, context.get_values())
             else:
                 return self.content
 
@@ -107,7 +107,7 @@ class ContentHandler:
             is_done = True
 
             # Dictionary or list of dictionaries
-            flat = lowercase_keys(flatten_dictionaries(node))
+            flat = Parser.lowercase_keys(Parser.flatten_dictionaries(node))
             for key, value in flat.items():
                 if key == 'template':
                     if isinstance(value, str):

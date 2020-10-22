@@ -7,7 +7,6 @@ from abc import abstractmethod, ABCMeta
 from typing import Dict, List, Union, Optional
 
 from py3resttest.constants import COMPARATORS, FAILURE_EXTRACTOR_EXCEPTION, FAILURE_VALIDATOR_FAILED, VALIDATOR_TESTS
-from py3resttest.parsing import flatten_dictionaries, lowercase_keys
 
 logger = logging.getLogger('py3resttest.validators')
 
@@ -286,9 +285,9 @@ class ComparatorValidator(AbstractValidator):
                 expected: 'myValue'
               }
         """
-
+        from py3resttest.utils import Parser
         output = ComparatorValidator()
-        config = lowercase_keys(flatten_dictionaries(config))
+        config = Parser.lowercase_keys(Parser.flatten_dictionaries(config))
         output.config = config
 
         output.extractor = _get_extractor(config)
@@ -322,7 +321,7 @@ class ComparatorValidator(AbstractValidator):
             output.expected = expected
         elif isinstance(expected, dict):
 
-            expected = lowercase_keys(expected)
+            expected = Parser.lowercase_keys(expected)
             template = expected.get('template')
             if template:  # Templated string
                 if not isinstance(template, str):
@@ -353,8 +352,9 @@ class ExtractTestValidator(AbstractValidator):
 
     @staticmethod
     def parse(config):
+        from py3resttest.utils import Parser
         output = ExtractTestValidator()
-        config = lowercase_keys(flatten_dictionaries(config))
+        config = Parser.lowercase_keys(Parser.flatten_dictionaries(config))
         output.config = config
         extractor = _get_extractor(config)
         output.extractor = extractor

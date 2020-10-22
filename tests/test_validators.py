@@ -4,7 +4,7 @@ import unittest
 from py3resttest import validators
 from py3resttest.binding import Context
 from py3resttest.constants import safe_length, regex_compare
-from py3resttest.validators import register_extractor
+from py3resttest.validators import register_extractor, _get_extractor, register_test, register_comparator
 
 
 class ValidatorsTest(unittest.TestCase):
@@ -290,6 +290,7 @@ class ValidatorsTest(unittest.TestCase):
 
     def test_abstract_extractor_parse(self):
         """ Test parsing a basic abstract extractor """
+
         class A(validators.AbstractExtractor):
             def extract_internal(self, query=None, body=None, headers=None, args=None):
                 ...
@@ -303,12 +304,17 @@ class ValidatorsTest(unittest.TestCase):
         self.assertEqual(True, ext.is_templated)
         self.assertEqual('$var', ext.query)
 
+        self.assertRaises(ValueError, validators.AbstractExtractor.configure_base, {'template1': '$var'}, ext)
+        self.assertRaises(TypeError, validators.AbstractExtractor.configure_base, 1, ext)
+
+        self.assertRaises(Exception, _get_extractor, {'x': "test"})
+
     def test_abstract_extractor_string(self):
         """ Test abstract extractor to_string method """
 
         class A(validators.AbstractExtractor):
             def extract_internal(self, query=None, body=None, headers=None, args=None):
-                ...
+                return 1
 
         ext = A()
         ext.is_templated = True
@@ -321,6 +327,8 @@ class ValidatorsTest(unittest.TestCase):
         expected = "Extractor type: {0}, query: {1}, is_templated: {2}, args: {3}".format(
             ext.extractor_type, ext.query, ext.is_templated, ext.args)
         self.assertEqual(expected, str(ext))
+        self.assertTrue(ext.is_body_extractor)
+        self.assertEqual(ext.extract_internal(), 1)
 
     def test_abstract_extractor_templating(self):
         """ Test that abstract extractors template the query """
@@ -433,6 +441,21 @@ class ValidatorsTest(unittest.TestCase):
         context.bind_variable('node', 'val')
         comp = validator.validate(myjson, context=context)
         self.assertTrue(comp)
+
+    def test_register_extractor(self):
+        self.assertRaises(TypeError, register_extractor, 1, lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'comparator', lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'test', lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'expected', lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'jsonpath_mini', lambda x: x)
+
+    def test_register_test(self):
+        self.assertRaises(TypeError, register_test, 1, lambda x: x)
+        self.assertRaises(ValueError, register_test, 'exists', lambda x: x)
+
+    def test_register_comparator(self):
+        self.assertRaises(TypeError, register_comparator, 1, lambda x: x)
+        self.assertRaises(ValueError, register_comparator, 'count_eq', lambda x: x)
 
     def test_parse_wrong_comparator(self):
         config = {
