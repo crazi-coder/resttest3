@@ -12,7 +12,10 @@ from py3resttest.validators import AbstractValidator, Failure
 
 class JsonSchemaValidator(AbstractValidator):
     """ Json schema validator using the jsonschema library """
-    schema = None
+
+    def __init__(self):
+        super(JsonSchemaValidator, self).__init__()
+        self.schema = None
 
     def validate(self, body=None, headers=None, context=None):
         schema_text = self.schema.get_content(context=context)
@@ -38,8 +41,7 @@ class JsonSchemaValidator(AbstractValidator):
         if 'schema' not in config:
             raise ValueError(
                 "Cannot create schema validator without a 'schema' configuration element!")
-        validator.schema = ContentHandler.parse_content(config[
-                                                            'schema'])
+        validator.schema = ContentHandler.parse_content(config['schema'])
         return validator
 
 

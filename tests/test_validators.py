@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
+from inspect import currentframe, getframeinfo
+from pathlib import Path
 
+from ext.validator_jsonschema import JsonSchemaValidator
 from py3resttest import validators
 from py3resttest.binding import Context
 from py3resttest.constants import safe_length, regex_compare
@@ -646,6 +649,21 @@ class ValidatorsTest(unittest.TestCase):
         self.assertEqual(validation_result.message,
                          "Extract and test validator failed on test: exists(None)")
 
+    def test_jsonschama(self):
+        filename = getframeinfo(currentframe()).filename
+        current_module_path = Path(filename)
+        file = str(current_module_path.parent) + "/miniapp-schema.json"
+        config = {
+            'schema': file,
+            'comparator': 'ne',
+            'expected': 3
+        }
+        comp_validator = JsonSchemaValidator.parse(config)
+        myjson_pass = str({"id": 3, })
+        myjson_fail = str({"id": 3, })
+
+        self.assertTrue(comp_validator.validate(body=myjson_pass))
+        self.assertTrue(comp_validator.validate(body=myjson_fail))
 
 if __name__ == '__main__':
     unittest.main()
