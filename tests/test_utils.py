@@ -14,7 +14,7 @@ class TestCaseUtils(unittest.TestCase):
 
     def test_read_file(self):
         with ChangeDir(os.getcwd()) as cd:
-            data = read_testcase_file(cd.new_path + 'tests/sample.yaml')
+            data = read_testcase_file(cd.new_path + '/tests/sample.yaml')
             self.assertEqual(data['include'], 'example')
 
 
