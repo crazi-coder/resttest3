@@ -14,7 +14,7 @@ class JMESPathExtractor(AbstractExtractor):
 
     def extract_internal(self, query=None, args=None, body=None, headers=None):
         if isinstance(body, bytes):
-            body = str(body, 'utf-8')
+            body = body.decode('utf-8')
 
         try:
             res = jmespath.search(query, json.loads(body))

@@ -1,12 +1,12 @@
 import logging
 import os
 import sys
-from alive_progress import alive_bar
 from argparse import ArgumentParser
 from pathlib import Path
 from typing import Dict, List
 
 import yaml
+from alive_progress import alive_bar
 
 from py3resttest.testcase import TestSet
 from py3resttest.utils import register_extensions
@@ -84,7 +84,6 @@ class Runner:
         total_testcase_count = len([y for x, y in testcase_set.test_group_list_dict.items() for c in y.testcase_list])
         with alive_bar(total_testcase_count) as bar:
             for test_group, test_group_object in testcase_set.test_group_list_dict.items():
-
                 for testcase_object in test_group_object.testcase_list:
                     bar()
                     testcase_object.run()
@@ -103,10 +102,11 @@ class Runner:
                         except KeyError:
                             failure_dict[test_group] = (1, [testcase_object])
         print("========== TEST RESULT ===========")
+        print("Total Test to run: %s" % total_testcase_count)
         for group_name, case_list_tuple in failure_dict.items():
             print("%sGroup Name: %s %s" % (self.FAIL, group_name, self.NOCOL))
             count, courtcase_list = case_list_tuple
-            print('%sTotal testcase failed: %s %s' % (self.FAIL, count, self.NOCOL))
+            print('%sTotal testcase success: %s %s' % (self.FAIL, count, self.NOCOL))
             for index, testcase in enumerate(courtcase_list):
                 print('\t%s %s. Case Name: %s %s' % (self.FAIL, index+1, testcase.name, self.NOCOL))
                 for f in testcase.failures:

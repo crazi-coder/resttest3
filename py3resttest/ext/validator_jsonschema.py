@@ -4,10 +4,10 @@ import traceback
 import jsonschema
 import yaml
 
+from py3resttest.constants import FAILURE_VALIDATOR_EXCEPTION
 from py3resttest.contenthandling import ContentHandler
 from py3resttest.utils import Parser
 from py3resttest.validators import AbstractValidator, Failure
-from py3resttest.constants import FAILURE_VALIDATOR_EXCEPTION
 
 
 class JsonSchemaValidator(AbstractValidator):
@@ -27,7 +27,10 @@ class JsonSchemaValidator(AbstractValidator):
             trace = traceback.format_exc()
             return Failure(message="JSON Schema Validation Failed", details=trace, validator=self,
                            failure_type=FAILURE_VALIDATOR_EXCEPTION)
-
+        except json.decoder.JSONDecodeError:
+            trace = traceback.format_exc()
+            return Failure(message="JSON Schema Validation Failed", details=trace, validator=self,
+                           failure_type=FAILURE_VALIDATOR_EXCEPTION)
     def get_readable_config(self, context=None):
         return "JSON schema validation"
 

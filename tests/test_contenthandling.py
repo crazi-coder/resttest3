@@ -23,7 +23,7 @@ class ContentHandlerTest(unittest.TestCase):
         handler.setup(body, is_template_content=False)
         self.assertEqual(body, handler.get_content())
         self.assertEqual(body, handler.get_content(context))
-
+        self.assertRaises(TypeError, handler.setup, [])
         # Templating
         handler.setup(body, is_template_content=True)
         self.assertEqual(body, handler.get_content())

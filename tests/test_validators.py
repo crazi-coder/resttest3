@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from py3resttest.constants import safe_length
 from py3resttest import validators
 from py3resttest.binding import Context
+from py3resttest.constants import safe_length, regex_compare
 from py3resttest.validators import register_extractor
 
 
@@ -116,6 +116,10 @@ class ValidatorsTest(unittest.TestCase):
         self.assertEqual(2, safe_length({'key': 'val', 1: 2}))
         self.assertEqual(-1, safe_length(False))
         self.assertEqual(-1, safe_length(None))
+
+    def test_regex_compare(self):
+        txt = "Millie Finn Gaten"
+        self.assertTrue(regex_compare(txt, "\s"))
 
     def test_validatortest_exists(self):
         func = validators.VALIDATOR_TESTS['exists']
@@ -400,13 +404,35 @@ class ValidatorsTest(unittest.TestCase):
         validator = validators.parse_validator('comparator', config)
         myjson = '{"key": {"val": 3}}'
         comp = validator.validate(body=myjson)
+        self.assertTrue(comp)
 
+        validator = validators.parse_validator('comparator', config)
+        my_body_str = '<html></html>'
+        comp = validator.validate(body=my_body_str)
+        self.assertEqual(comp.message, 'Extractor threw exception')
+
+        validator = validators.parse_validator('comparator', config)
+        myjson_1 = '{"key": {"val": 4}}'
+        comp = validator.validate(body=myjson_1)
+        self.assertFalse(comp)
+
+        # Try it with templating
         # Try it with templating
         config['jsonpath_mini'] = {'template': 'key.$node'}
         validator = validators.parse_validator('comparator', config)
         context = Context()
         context.bind_variable('node', 'val')
         comp = validator.validate(myjson, context=context)
+        self.assertTrue(comp)
+
+        # Try it with templating
+        del config['jsonpath_mini']
+        config['jmespath'] = {'template': 'key.$node'}
+        validator = validators.parse_validator('comparator', config)
+        context = Context()
+        context.bind_variable('node', 'val')
+        comp = validator.validate(myjson, context=context)
+        self.assertTrue(comp)
 
     def test_parse_wrong_comparator(self):
         config = {
@@ -547,7 +573,6 @@ class ValidatorsTest(unittest.TestCase):
                          validators.FAILURE_VALIDATOR_FAILED)
         expected_details = 'Extractor: Extractor Type: jsonpath_mini,  Query: "key.val", Templated?: False'
         self.assertEqual(expected_details, failure.details)
-        print("Failure config: " + str(failure.details))
         self.assertEqual(comp, failure.validator)
 
         failure = comp.validate(body='{"id": 3, "key": {"val": 4}')
