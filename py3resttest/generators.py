@@ -3,7 +3,7 @@ import os
 import random
 import string
 
-from py3resttest.parsing import flatten_dictionaries, lowercase_keys
+
 
 """ Collection of generators to be used in templating for test data
 
@@ -219,8 +219,8 @@ def parse_generator(configuration):
     """ Parses a configuration built from yaml and returns a generator
         Configuration should be a map
     """
-
-    configuration = lowercase_keys(flatten_dictionaries(configuration))
+    from py3resttest.utils import Parser
+    configuration = Parser.lowercase_keys(Parser.flatten_dictionaries(configuration))
     gen_type = str(configuration.get(u'type')).lower()
 
     if gen_type not in GENERATOR_TYPES:

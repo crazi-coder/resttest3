@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 import unittest
+from inspect import currentframe, getframeinfo
+from pathlib import Path
 
 from py3resttest import validators
 from py3resttest.binding import Context
 from py3resttest.constants import safe_length, regex_compare
-from py3resttest.validators import register_extractor
+from py3resttest.ext.validator_jsonschema import JsonSchemaValidator
+from py3resttest.validators import register_extractor, _get_extractor, register_test, register_comparator
 
 
 class ValidatorsTest(unittest.TestCase):
@@ -290,6 +293,7 @@ class ValidatorsTest(unittest.TestCase):
 
     def test_abstract_extractor_parse(self):
         """ Test parsing a basic abstract extractor """
+
         class A(validators.AbstractExtractor):
             def extract_internal(self, query=None, body=None, headers=None, args=None):
                 ...
@@ -303,12 +307,17 @@ class ValidatorsTest(unittest.TestCase):
         self.assertEqual(True, ext.is_templated)
         self.assertEqual('$var', ext.query)
 
+        self.assertRaises(ValueError, validators.AbstractExtractor.configure_base, {'template1': '$var'}, ext)
+        self.assertRaises(TypeError, validators.AbstractExtractor.configure_base, 1, ext)
+
+        self.assertRaises(Exception, _get_extractor, {'x': "test"})
+
     def test_abstract_extractor_string(self):
         """ Test abstract extractor to_string method """
 
         class A(validators.AbstractExtractor):
             def extract_internal(self, query=None, body=None, headers=None, args=None):
-                ...
+                return 1
 
         ext = A()
         ext.is_templated = True
@@ -321,6 +330,8 @@ class ValidatorsTest(unittest.TestCase):
         expected = "Extractor type: {0}, query: {1}, is_templated: {2}, args: {3}".format(
             ext.extractor_type, ext.query, ext.is_templated, ext.args)
         self.assertEqual(expected, str(ext))
+        self.assertTrue(ext.is_body_extractor)
+        self.assertEqual(ext.extract_internal(), 1)
 
     def test_abstract_extractor_templating(self):
         """ Test that abstract extractors template the query """
@@ -433,6 +444,21 @@ class ValidatorsTest(unittest.TestCase):
         context.bind_variable('node', 'val')
         comp = validator.validate(myjson, context=context)
         self.assertTrue(comp)
+
+    def test_register_extractor(self):
+        self.assertRaises(TypeError, register_extractor, 1, lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'comparator', lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'test', lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'expected', lambda x: x)
+        self.assertRaises(ValueError, register_extractor, 'jsonpath_mini', lambda x: x)
+
+    def test_register_test(self):
+        self.assertRaises(TypeError, register_test, 1, lambda x: x)
+        self.assertRaises(ValueError, register_test, 'exists', lambda x: x)
+
+    def test_register_comparator(self):
+        self.assertRaises(TypeError, register_comparator, 1, lambda x: x)
+        self.assertRaises(ValueError, register_comparator, 'count_eq', lambda x: x)
 
     def test_parse_wrong_comparator(self):
         config = {
@@ -623,6 +649,25 @@ class ValidatorsTest(unittest.TestCase):
         self.assertEqual(validation_result.message,
                          "Extract and test validator failed on test: exists(None)")
 
+    def test_jsonschama(self):
+        filename = getframeinfo(currentframe()).filename
+        current_module_path = Path(filename)
+        file = str(current_module_path.parent) + "/miniapp-schema.json"
+        with open(file) as f:
+            config = {
+                'schema': f.read()
+            }
+        comp_validator = JsonSchemaValidator.parse(config)
+        myjson_pass = bytes('{"id": 3 }', 'utf-8')
+        myjson_fail = str({"id": 3, })
+        self.assertEqual(comp_validator.validate(body=myjson_fail).message, "Invalid response json body")
+        result = comp_validator.validate(body=myjson_pass)
+        self.assertTrue(result)
+
+        myjson_pass = bytes('{"id1": "id" }', 'utf-8')
+        self.assertFalse(comp_validator.validate(body=myjson_pass))
+        self.assertRaises(ValueError, JsonSchemaValidator.parse, {'x': 20})
+        self.assertEqual(comp_validator.get_readable_config(), "JSON schema validation")
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-import sys
 import unittest
 
-from py3resttest.parsing import *
-
-PYTHON_MAJOR_VERSION = sys.version_info[0]
+from py3resttest.utils import Parser
 
 
 class TestParsing(unittest.TestCase):
@@ -16,25 +13,25 @@ class TestParsing(unittest.TestCase):
         byteform = b'\xe6\x8c\x87\xe4\xba\x8b\xe5\xad\x97'
         num = 156
 
-        self.assertEqual(byteform, encode_unicode_bytes(unicoded))
-        self.assertEqual(byteform, encode_unicode_bytes(byteform))
-        self.assertEqual(b'156', encode_unicode_bytes(num))
+        self.assertEqual(byteform, Parser.encode_unicode_bytes(unicoded))
+        self.assertEqual(byteform, Parser.encode_unicode_bytes(byteform))
+        self.assertEqual(b'156', Parser.encode_unicode_bytes(num))
 
     def test_unicode_templating(self):
         # Unicode template and unicode substitution
         unicode_template_string = u'my name is 指 and my value is $var'
         unicode_variables = {'var': u'漢'}
         normal_variables = {'var': u'bob'}
-        substituted = safe_substitute_unicode_template(unicode_template_string, unicode_variables)
+        substituted = Parser.safe_substitute_unicode_template(unicode_template_string, unicode_variables)
         self.assertEqual(u'my name is 指 and my value is 漢', substituted)
 
         # Normal template and unicode substitution
         normal_template_string = 'my normal name is blah and my unicode name is $var'
-        substituted = safe_substitute_unicode_template(normal_template_string, unicode_variables)
+        substituted = Parser.safe_substitute_unicode_template(normal_template_string, unicode_variables)
         self.assertEqual(u'my normal name is blah and my unicode name is 漢', substituted)
 
         # Unicode template and normal substitution
-        substituted = safe_substitute_unicode_template(unicode_template_string, normal_variables)
+        substituted = Parser.safe_substitute_unicode_template(unicode_template_string, normal_variables)
         self.assertEqual(u'my name is 指 and my value is bob', substituted)
 
     def test_flatten(self):
@@ -43,7 +40,7 @@ class TestParsing(unittest.TestCase):
         # Test happy path: list of single-item dictionaries in
         array = [{"url": "/cheese"}, {"method": "POST"}]
         expected = {"url": "/cheese", "method": "POST"}
-        output = flatten_dictionaries(array)
+        output = Parser.flatten_dictionaries(array)
         self.assertTrue(isinstance(output, dict))
         # Test that expected output matches actual
         self.assertFalse(len(set(output.items()) ^ set(expected.items())))
@@ -51,7 +48,7 @@ class TestParsing(unittest.TestCase):
         # Test dictionary input
         array = {"url": "/cheese", "method": "POST"}
         expected = {"url": "/cheese", "method": "POST"}
-        output = flatten_dictionaries(array)
+        output = Parser.flatten_dictionaries(array)
         self.assertTrue(isinstance(output, dict))
         # Test that expected output matches actual
         self.assertTrue(len(set(output.items()) ^ set(expected.items())) == 0)
@@ -59,7 +56,7 @@ class TestParsing(unittest.TestCase):
         # Test empty list input
         array = []
         expected = {}
-        output = flatten_dictionaries(array)
+        output = Parser.flatten_dictionaries(array)
         self.assertTrue(isinstance(output, dict))
         # Test that expected output matches actual
         self.assertFalse(len(set(output.items()) ^ set(expected.items())))
@@ -67,7 +64,7 @@ class TestParsing(unittest.TestCase):
         # Test empty dictionary input
         array = {}
         expected = {}
-        output = flatten_dictionaries(array)
+        output = Parser.flatten_dictionaries(array)
         self.assertTrue(isinstance(output, dict))
         # Test that expected output matches actual
         self.assertFalse(len(set(output.items()) ^ set(expected.items())))
@@ -75,44 +72,44 @@ class TestParsing(unittest.TestCase):
         # Test mixed-size input dictionaries
         array = [{"url": "/cheese"}, {"method": "POST", "foo": "bar"}]
         expected = {"url": "/cheese", "method": "POST", "foo": "bar"}
-        output = flatten_dictionaries(array)
+        output = Parser.flatten_dictionaries(array)
         self.assertTrue(isinstance(output, dict))
         # Test that expected output matches actual
         self.assertFalse(len(set(output.items()) ^ set(expected.items())))
 
     def test_safe_boolean(self):
         """ Test safe conversion to boolean """
-        self.assertFalse(safe_to_bool(False))
-        self.assertTrue(safe_to_bool(True))
-        self.assertTrue(safe_to_bool('True'))
-        self.assertTrue(safe_to_bool('true'))
-        self.assertTrue(safe_to_bool('truE'))
-        self.assertFalse(safe_to_bool('false'))
+        self.assertFalse(Parser.safe_to_bool(False))
+        self.assertTrue(Parser.safe_to_bool(True))
+        self.assertTrue(Parser.safe_to_bool('True'))
+        self.assertTrue(Parser.safe_to_bool('true'))
+        self.assertTrue(Parser.safe_to_bool('truE'))
+        self.assertFalse(Parser.safe_to_bool('false'))
 
         # Try things that should throw exceptions
         try:
-            boolean = safe_to_bool('fail')
+            boolean = Parser.safe_to_bool('fail')
             raise AssertionError('Failed to throw type error that should have')
         except TypeError:
             pass  # Good
 
         try:
-            boolean = safe_to_bool([])
+            boolean = Parser.safe_to_bool([])
             raise AssertionError('Failed to throw type error that should have')
         except TypeError:
             pass  # Good
 
         try:
-            boolean = safe_to_bool(None)
+            boolean = Parser.safe_to_bool(None)
             raise AssertionError('Failed to throw type error that should have')
         except TypeError:
             pass  # Good
 
     def test_safe_to_json(self):
 
-        self.assertEqual(u'adj12321nv', safe_to_json(u'adj12321nv'))
+        self.assertEqual(u'adj12321nv', Parser.safe_to_json(u'adj12321nv'))
 
-        self.assertEqual(u'5.2', safe_to_json(5.2))
+        self.assertEqual(u'5.2', Parser.safe_to_json(5.2))
 
         class Special(object):
             bal = 5.3
@@ -121,16 +118,7 @@ class TestParsing(unittest.TestCase):
             def __init__(self):
                 self.newval = 'cherries'
 
-        self.assertEqual({'newval': 'cherries'}, safe_to_json(Special()))
-
-    def test_run_configure(self):
-        """ Test the configure function use """
-        converter = safe_to_bool
-        pass
-
-    def test_configure(self):
-        """ Do stuff here """
-        pass
+        self.assertEqual({'newval': 'cherries'}, Parser.safe_to_json(Special()))
 
 
 if __name__ == '__main__':

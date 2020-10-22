@@ -5,10 +5,11 @@ import string
 import time
 import traceback
 from io import BytesIO
+from pathlib import Path
 from typing import List, Dict
 from urllib.parse import urljoin
+
 import pycurl
-from pathlib import Path
 
 from py3resttest.binding import Context
 from py3resttest.constants import (
@@ -17,7 +18,6 @@ from py3resttest.constants import (
 )
 from py3resttest.contenthandling import ContentHandler
 from py3resttest.exception import HttpMethodError, BindError, ValidatorError
-from py3resttest.parsing import safe_to_json, lowercase_keys, flatten_dictionaries
 from py3resttest.utils import read_testcase_file, ChangeDir, Parser
 from py3resttest.validators import parse_extractor, parse_validator, Failure
 
@@ -42,7 +42,7 @@ class TestCaseConfig:
         return
 
     def __str__(self):
-        return json.dumps(self, default=safe_to_json)
+        return json.dumps(self, default=Parser.safe_to_json)
 
 
 class TestSet:
@@ -72,7 +72,7 @@ class TestSet:
                 logger.warning("Skipping the configuration %s" % testcase_node)
                 continue
 
-            testcase_node = lowercase_keys(testcase_node)
+            testcase_node = Parser.lowercase_keys(testcase_node)
             for key in testcase_node:
                 sub_testcase_node = testcase_node[key]
                 if key == YamlKeyWords.INCLUDE:
@@ -247,7 +247,7 @@ class TestCase:
         self.result = None
 
     def __str__(self):
-        return json.dumps(self, default=safe_to_json)
+        return json.dumps(self, default=Parser.safe_to_json)
 
     @property
     def auth_username(self):
@@ -299,7 +299,7 @@ class TestCase:
     def url(self, value):
         if isinstance(value, dict):
             # this is the templated url , we need to convert it into actual URL
-            template_str = lowercase_keys(value)['template']
+            template_str = Parser.lowercase_keys(value)['template']
             url = urljoin(self.__base_url, Parser.coerce_to_string(template_str))
             self.set_template("url", url)
             self.__url = url
@@ -313,7 +313,7 @@ class TestCase:
 
     @generator_binds.setter
     def generator_binds(self, value: Dict):
-        binds_dict = flatten_dictionaries(value)
+        binds_dict = Parser.flatten_dictionaries(value)
         __binds_dict = {str(k): str(v) for k, v in binds_dict.items()}
         self.__generator_binds_dict.update(__binds_dict)
 
@@ -327,7 +327,7 @@ class TestCase:
 
     @extract_binds.setter
     def extract_binds(self, bind_dict):
-        bind_dict = flatten_dictionaries(bind_dict)
+        bind_dict = Parser.flatten_dictionaries(bind_dict)
         for variable_name, extractor in bind_dict.items():
             if not isinstance(extractor, dict) or len(extractor) == 0:
                 raise BindError("Extractors must be defined as maps of extractorType:{configs} with 1 entry")
@@ -380,7 +380,7 @@ class TestCase:
 
     @headers.setter
     def headers(self, headers):
-        config_value = flatten_dictionaries(headers)
+        config_value = Parser.flatten_dictionaries(headers)
         if isinstance(config_value, dict):
             for key, value in config_value.items():
                 if isinstance(value, dict):
@@ -424,7 +424,7 @@ class TestCase:
         return val
 
     def parse(self, testcase_dict):
-        testcase_dict = lowercase_keys(flatten_dictionaries(testcase_dict))
+        testcase_dict = Parser.flatten_lowercase_keys_dict(testcase_dict)
 
         for keyword in TestCase.KEYWORD_DICT.keys():
             value = testcase_dict.get(keyword)
@@ -452,9 +452,9 @@ class TestCase:
             elif keyword == TestCaseKeywords.headers:
                 self.headers = value
             elif keyword == TestCaseKeywords.variable_binds:
-                self.__variable_binds_dict = flatten_dictionaries(value)
+                self.__variable_binds_dict = Parser.flatten_dictionaries(value)
             elif keyword == TestCaseKeywords.generator_binds:
-                self.__generator_binds_dict = {str(k): str(v) for k, v in flatten_dictionaries(value)}
+                self.__generator_binds_dict = {str(k): str(v) for k, v in Parser.flatten_dictionaries(value)}
             elif keyword == TestCaseKeywords.options:
                 raise NotImplementedError("Yet to Support")
             elif keyword == TestCaseKeywords.body:
