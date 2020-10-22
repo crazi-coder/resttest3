@@ -3,10 +3,10 @@ import unittest
 from inspect import currentframe, getframeinfo
 from pathlib import Path
 
-from ext.validator_jsonschema import JsonSchemaValidator
 from py3resttest import validators
 from py3resttest.binding import Context
 from py3resttest.constants import safe_length, regex_compare
+from py3resttest.ext.validator_jsonschema import JsonSchemaValidator
 from py3resttest.validators import register_extractor, _get_extractor, register_test, register_comparator
 
 
@@ -653,17 +653,21 @@ class ValidatorsTest(unittest.TestCase):
         filename = getframeinfo(currentframe()).filename
         current_module_path = Path(filename)
         file = str(current_module_path.parent) + "/miniapp-schema.json"
-        config = {
-            'schema': file,
-            'comparator': 'ne',
-            'expected': 3
-        }
+        with open(file) as f:
+            config = {
+                'schema': f.read()
+            }
         comp_validator = JsonSchemaValidator.parse(config)
-        myjson_pass = str({"id": 3, })
+        myjson_pass = bytes('{"id": 3 }', 'utf-8')
         myjson_fail = str({"id": 3, })
+        self.assertEqual(comp_validator.validate(body=myjson_fail).message, "Invalid response json body")
+        result = comp_validator.validate(body=myjson_pass)
+        self.assertTrue(result)
 
-        self.assertTrue(comp_validator.validate(body=myjson_pass))
-        self.assertTrue(comp_validator.validate(body=myjson_fail))
+        myjson_pass = bytes('{"id1": "id" }', 'utf-8')
+        self.assertFalse(comp_validator.validate(body=myjson_pass))
+        self.assertRaises(ValueError, JsonSchemaValidator.parse, {'x': 20})
+        self.assertEqual(comp_validator.get_readable_config(), "JSON schema validation")
 
 if __name__ == '__main__':
     unittest.main()

@@ -3,6 +3,7 @@
   "title": "Person",
   "description": "A person from the miniapp",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "id": {
       "type": "integer",

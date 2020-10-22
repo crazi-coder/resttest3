@@ -1,7 +1,5 @@
 py3resttest
 ==========
-
-
 ![GitHub Workflow Status](https://img.shields.io/github/workflow/status/abhijo89-to/py3resttest/Python%20package?style=plastic)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/resttest3)
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/resttest3)
