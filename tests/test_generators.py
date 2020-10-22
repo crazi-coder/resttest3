@@ -1,14 +1,10 @@
 import os
 import string
-import sys
 import types
 import unittest
 
 from py3resttest import generators
-
-# Python 3 compatibility
-if sys.version_info[0] == 3:
-    from builtins import range as xrange
+from py3resttest.binding import Context
 
 
 class GeneratorTest(unittest.TestCase):
@@ -18,7 +14,7 @@ class GeneratorTest(unittest.TestCase):
         """ Basic test for a generator, checks values and applies test function """
         self.assertTrue(isinstance(generator, types.GeneratorType))
 
-        for x in xrange(0, 100):
+        for x in range(0, 100):
             val = next(generator)
             self.assertTrue(val is not None)
             if value_test_function:
@@ -30,11 +26,20 @@ class GeneratorTest(unittest.TestCase):
         val = next(generator_input)
 
         # Check for not repeating easily
-        for x in xrange(0, 5):
+        for x in range(0, 5):
             val2 = next(generator_input)
             self.assertTrue(val)
             self.assertTrue(val != val2)
             val = val2
+
+    def test_invalid_gen_type(self):
+        c = Context()
+        with self.assertRaises(ValueError) as context:
+            c.add_generator('example', [1, 2, 3])
+
+        self.assertTrue('Cannot add generator' in str(context.exception))
+
+        self.assertRaises(ValueError, c.add_generator, 'example', [1, 2, 3])
 
     def test_factory_ids(self):
         f = generators.factory_generate_ids(1)()
@@ -62,6 +67,19 @@ class GeneratorTest(unittest.TestCase):
         self.generator_repeat_test(ids1)
         self.generator_repeat_test(ids2)
         self.assertEqual(next(ids1), next(ids2))
+
+        c = Context()
+        c.variables = {'x': '$x'}
+        x = generators.factory_generate_ids(1, increment=0)()
+        c.add_generator('x', x)
+
+        self.assertEqual(c.bind_generator_next('x', 'x'), c.bind_generator_next('x', 'x'))
+
+        c.bind_variable('x', 1)
+        var1 = c.get_value('x')
+        c.bind_variable('x', 1)
+        var2 = c.get_value('x')
+        self.assertEqual(var1, var2)
 
     def test_random_ids(self):
         """ Test random in ids generator """
@@ -95,10 +113,10 @@ class GeneratorTest(unittest.TestCase):
         # Test multiple charsets and string lengths
         for charset in charsets:
             # Test different lengths for charset
-            for my_length in xrange(1, 17):
+            for my_length in range(1, 17):
                 gen = generators.factory_generate_text(
                     legal_characters=charset, min_length=my_length, max_length=my_length)()
-                for x in xrange(0, 10):
+                for x in range(0, 10):
                     val = next(gen)
                     self.assertEqual(my_length, len(val))
 
@@ -179,7 +197,7 @@ class GeneratorTest(unittest.TestCase):
                 config['character_set'] = charset
                 gen = generators.parse_generator(config)
                 myset = set(generators.CHARACTER_SETS[charset])
-                for x in xrange(0, 50):
+                for x in range(0, 50):
                     val = next(gen)
                     self.assertTrue(set(val).issubset(set(myset)))
             except Exception as e:

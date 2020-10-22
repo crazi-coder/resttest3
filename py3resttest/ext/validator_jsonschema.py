@@ -4,10 +4,10 @@ import traceback
 import jsonschema
 import yaml
 
+from py3resttest.constants import FAILURE_VALIDATOR_EXCEPTION
 from py3resttest.contenthandling import ContentHandler
 from py3resttest.utils import Parser
 from py3resttest.validators import AbstractValidator, Failure
-from py3resttest.constants import FAILURE_VALIDATOR_EXCEPTION
 
 
 class JsonSchemaValidator(AbstractValidator):

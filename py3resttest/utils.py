@@ -3,6 +3,7 @@ import os
 import string
 import threading
 from email import message_from_string
+from pathlib import Path
 from typing import Dict
 
 import yaml
@@ -18,20 +19,20 @@ class ChangeDir:
     """Context manager for changing the current working directory"""
     DIR_LOCK = threading.RLock()  # Guards operations changing the working directory
 
-    # http://stackoverflow.com/questions/431684/how-do-i-cd-in-python/13197763#13197763
-
-    def __init__(self, newPath):
-        self.newPath = newPath
+    def __init__(self, new_path):
+        self.new_path = str(Path(new_path).resolve())
+        self.saved_path = None
 
     def __enter__(self):
-        if self.newPath:  # Don't CD to nothingness
+        if self.new_path:  # Don't CD to nothingness
             ChangeDir.DIR_LOCK.acquire()
-            self.savedPath = os.getcwd()
-            os.chdir(self.newPath)
+            self.saved_path = os.getcwd()
+            os.chdir(self.new_path)
+        return self
 
     def __exit__(self, etype, value, traceback):
-        if self.newPath:  # Don't CD to nothingness
-            os.chdir(self.savedPath)
+        if self.new_path:  # Don't CD to nothingness
+            os.chdir(self.saved_path)
             ChangeDir.DIR_LOCK.release()
 
 
