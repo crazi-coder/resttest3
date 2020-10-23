@@ -8,6 +8,6 @@ py3resttest
 ![GitHub All Releases](https://img.shields.io/github/downloads/abhijo89-to/py3resttest/total)
 [![Coverage Status](https://coveralls.io/repos/github/abhijo89-to/py3resttest/badge.svg)](https://coveralls.io/github/abhijo89-to/py3resttest)
 
-Please read documentation in https://abhijo89-to.github.io/py3resttest/. We are doing active development for python3 and removed python2 support 
+Please read [documentation](https://abhijo89-to.github.io/py3resttest/). We are doing active development for python3 and removed python2 support 
 
-This project is a fork of https://github.com/svanoort/pyresttest. 
+This project is a fork of [pyresttest](https://github.com/svanoort/pyresttest)
