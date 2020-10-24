@@ -1,18 +1,17 @@
 from setuptools import setup, find_packages
-import py3resttest
-with open(u"requirements.txt") as fp:
+with open("requirements.txt") as fp:
     install_requires = [lib_str.strip() for lib_str in fp.read().split("\n") if not lib_str.startswith("#")]
 
-with open(u"requirements.txt") as fp:
+with open("requirements.txt") as fp:
     test_dependencies = [lib_str.strip() for lib_str in fp.read().split("\n") if not lib_str.startswith("#")]
 
 setup(
     name='resttest3',
-    version=py3resttest.__version__,
+    version="1.0.1",
     description='Python RESTful API Testing & Micro benchmarking Tool',
     long_description='Python RESTful API Testing & Microbenchmarking Tool '
                      '\n Documentation at https://abhijo89-to.github.io/py3resttest/',
-    author=py3resttest.__author__,
+    author="Abhilash Joseph C",
     author_email='abhilash@softlinkweb.com',
     url='https://github.com/abhijo89-to/py3resttest',
     keywords=['rest', 'web', 'http', 'testing', 'api'],

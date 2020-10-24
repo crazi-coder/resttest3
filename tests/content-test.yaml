@@ -18,8 +18,8 @@
             - assertTrue: { header: content-type, test: exists }
 
 - test:
-      - name: "Create/update person 7, no template"
+    - name: "Create/update person 7, no template"
     - url: "/api/person/7/"
     - method: "PUT"
-      - headers: { template: { '$headername': '$headervalue' } }
+    - headers: { template: { '$headername': '$headervalue' } }
     - body: '{"first_name": "Gaius","id": "7","last_name": "Romani","login": "gromani"}'
