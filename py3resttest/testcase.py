@@ -139,7 +139,6 @@ class TestSet:
                         for node_dict in sub_testcase_node:
                             if __group_name is None:
                                 __group_name = node_dict.get(TestCaseKeywords.group)
-                                break
 
                         __group_name = __group_name if __group_name else TestCaseGroup.DEFAULT_GROUP
                         try:
@@ -237,7 +236,6 @@ class TestCaseGroup:
         return self.__context
 
 
-
 class TestResult:
 
     def __init__(self,  body, status_code):
@@ -284,6 +282,7 @@ class TestCase:
         self.__response_code = None
         self.__passed = False
         self.__failure_list = []
+        self.__abs_url = False
 
         self.__header_dict = {}
         self.__http_method = EnumHttpMethod.GET.name
@@ -362,19 +361,20 @@ class TestCase:
         val = self.realize_template("url", self.__context)
         if val is None:
             val = self.__url
+        if not self.__abs_url:
+            val = urljoin(self.__base_url, val)
         return val
 
     @url.setter
     def url(self, value):
+
         if isinstance(value, dict):
             # this is the templated url , we need to convert it into actual URL
             template_str = Parser.lowercase_keys(value)['template']
-            url = urljoin(self.__base_url, Parser.coerce_to_string(template_str))
-            self.set_template("url", url)
-            self.__url = url
+            self.set_template("url", Parser.coerce_to_string(template_str))
+            self.__url = value
         else:
-            url = urljoin(self.__base_url, Parser.coerce_to_string(value))
-            self.__url = url
+            self.__url = value
 
     @property
     def generator_binds(self):
@@ -400,8 +400,11 @@ class TestCase:
 
     @extract_binds.setter
     def extract_binds(self, bind_dict):
+
         bind_dict = Parser.flatten_dictionaries(bind_dict)
+
         for variable_name, extractor in bind_dict.items():
+
             if not isinstance(extractor, dict) or len(extractor) == 0:
                 raise BindError("Extractors must be defined as maps of extractorType:{configs} with 1 entry")
             if len(extractor) > 1:
@@ -536,6 +539,8 @@ class TestCase:
                 raise NotImplementedError("Yet to Support")
             elif keyword == TestCaseKeywords.body:
                 self.body = value
+            elif keyword == TestCaseKeywords.absolute_urls:
+                self.__abs_url = Parser.safe_to_bool(value)
 
         expected_status = testcase_dict.get(TestCaseKeywords.expected_status, [])
         if expected_status:
@@ -692,7 +697,8 @@ class TestCase:
         response_code = curl_handler.getinfo(pycurl.RESPONSE_CODE)
         self.body = body
         self.__response_code = int(response_code)
-
+        if self.config.print_bodies:
+            print(body)
         try:
             response_headers = Parser.parse_headers(header_byte.getvalue())
             self.__response_headers = response_headers

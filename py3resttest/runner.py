@@ -57,7 +57,8 @@ class Runner:
     def __init__(self):
         self.__args = ArgsRunner()
 
-    def read_test_file(self, file_location: str) -> List[Dict]:
+    @staticmethod
+    def read_test_file(file_location: str) -> List[Dict]:
         with open(file_location, 'r') as f:
             test_dict = yaml.safe_load(f.read())
         return test_dict
@@ -106,7 +107,7 @@ class Runner:
         for group_name, case_list_tuple in failure_dict.items():
             print("%sGroup Name: %s %s" % (self.FAIL, group_name, self.NOCOL))
             count, courtcase_list = case_list_tuple
-            print('%sTotal testcase success: %s %s' % (self.FAIL, count, self.NOCOL))
+            print('%sTotal testcase failed: %s %s' % (self.FAIL, count, self.NOCOL))
             for index, testcase in enumerate(courtcase_list):
                 print('\t%s %s. Case Name: %s %s' % (self.FAIL, index+1, testcase.name, self.NOCOL))
                 for f in testcase.failures:
@@ -115,7 +116,7 @@ class Runner:
         for group_name, case_list_tuple in success_dict.items():
             print("%sGroup Name: %s %s" % (self.SUCCESS, group_name, self.NOCOL))
             count, courtcase_list = case_list_tuple
-            print('%sTotal testcase failed: %s %s' % (self.SUCCESS, count, self.NOCOL))
+            print('%sTotal testcase success: %s %s' % (self.SUCCESS, count, self.NOCOL))
             for index, testcase in enumerate(courtcase_list):
                 print('\t%s %s. Case Name: %s %s' % (self.SUCCESS, index+1, testcase.name, self.NOCOL))
         return 0

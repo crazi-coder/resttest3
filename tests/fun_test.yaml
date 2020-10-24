@@ -1,0 +1,40 @@
+- config:
+      - variable_binds: { 'version': 'v3' } # Defaine the variable which can use for all testcase
+      - print_bodies: false
+- test:
+      - name: Check status Code to be 200
+      - group: "Basic"
+      - url: { 'template': api/rest/$version/ }
+      - validators:
+            - compare: { jsonpath_mini: 'dockets', expected: 'https://www.courtlistener.com/api/rest/v3/dockets/' }
+      - extract_binds:
+            - "docket": { jsonpath_mini: "dockets" }
+
+- test:
+      - name: Get docket information
+      - group: "Basic"
+      - url: { 'template': $docket }
+      - absolute-url: true
+      - validators:
+            - compare: { jsonpath_mini: 'previous', expected: null }
+
+
+- test:
+      - name: Get docket information for docket 1
+      - group: "Basic"
+      - url: api/rest/v3/dockets/1/
+      - validators:
+            - compare: { jsonpath_mini: 'id', compare: eq, expected: 1 }
+      - extract_binds:
+            - "clusters_url": { jsonpath_mini: "clusters.0" }
+
+- test:
+      - name: Get docket clusters information
+      - group: "Basic"
+      - url: { 'template': $clusters_url }
+      - absolute-url: true
+      - validators:
+            - compare: { jsonpath_mini: 'id',  compare: eq, expected: 2442562 }
+            - compare: { jsonpath_mini: 'date_filed',  compare: str_eq, expected: '2010-08-10' }
+
+
