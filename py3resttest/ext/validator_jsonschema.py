@@ -33,6 +33,7 @@ class JsonSchemaValidator(AbstractValidator):
             trace = traceback.format_exc()
             return Failure(message="Invalid response json body", details=trace, validator=self,
                            failure_type=FAILURE_VALIDATOR_EXCEPTION)
+
     def get_readable_config(self, context=None):
         return "JSON schema validation"
 

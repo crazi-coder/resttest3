@@ -130,7 +130,7 @@ class GeneratorTest(unittest.TestCase):
         gen = generators.factory_fixed_sequence(vals)()
         self.generator_basic_test(gen, lambda x: x in vals)
 
-        vals = set(['a', 'b', 'c'])
+        vals = {'a', 'b', 'c'}
         gen = generators.factory_fixed_sequence(vals)()
         self.generator_basic_test(gen, lambda x: x in vals)
 
@@ -151,7 +151,7 @@ class GeneratorTest(unittest.TestCase):
         gen = generators.factory_choice_generator(vals)()
         self.generator_basic_test(gen, lambda x: x in vals)
 
-        vals = set(['a', 'b', 'c'])
+        vals = {'a', 'b', 'c'}
         gen = generators.factory_choice_generator(vals)()
         self.generator_basic_test(gen, lambda x: x in vals)
 

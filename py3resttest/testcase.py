@@ -6,7 +6,7 @@ import time
 import traceback
 from io import BytesIO
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Optional
 from urllib.parse import urljoin
 
 import pycurl
@@ -18,6 +18,7 @@ from py3resttest.constants import (
 )
 from py3resttest.contenthandling import ContentHandler
 from py3resttest.exception import HttpMethodError, BindError, ValidatorError
+from py3resttest.generators import parse_generator
 from py3resttest.utils import read_testcase_file, ChangeDir, Parser
 from py3resttest.validators import parse_extractor, parse_validator, Failure
 
@@ -28,18 +29,41 @@ class TestCaseConfig:
 
     def __init__(self):
         self.__variable_binds_dict = {}
+        self.timeout = 60
+        self.print_bodies = False
+        self.retries = 0
+        self.generators = {}
 
     @property
-    def variable_binds_dict(self):
+    def variable_binds(self):
         return self.__variable_binds_dict
 
-    @variable_binds_dict.setter
-    def variable_binds_dict(self, variable_dict):
+    @variable_binds.setter
+    def variable_binds(self, variable_dict):
         if isinstance(variable_dict, dict):
-            self.__variable_binds_dict.update(variable_dict)
+            self.__variable_binds_dict.update(Parser.flatten_dictionaries(variable_dict))
 
     def parse(self, config_node):
-        return
+        node = Parser.flatten_lowercase_keys_dict(config_node)
+
+        for key, value in node.items():
+            if key == 'timeout':
+                self.timeout = int(value)
+            elif key == u'print_bodies':
+                self.print_bodies = Parser.safe_to_bool(value)
+            elif key == 'retries':
+                self.retries = int(value)
+            elif key == 'variable_binds':
+                self.variable_binds = value
+            elif key == u'generators':
+                if not isinstance(value, list):
+                    raise TypeError("generators in config should defined as list(array).")
+                flat = Parser.flatten_dictionaries(value)
+                gen_dict = {}
+                for generator_name, generator_config in flat.items():
+                    gen = parse_generator(generator_config)
+                    gen_dict[str(generator_name)] = gen
+                self.generators = gen_dict
 
     def __str__(self):
         return json.dumps(self, default=Parser.safe_to_json)
@@ -53,20 +77,20 @@ class TestSet:
         self.__context = Context()
         self.__extract_binds = {}
         self.__variable_binds = {}
+        self.config = TestCaseConfig()
 
     def parse(self, base_url: str, testcase_list: List, test_file=None, working_directory=None, variable_dict=None):
-
-        testcase_config = TestCaseConfig()
 
         if working_directory is None:
             working_directory = os.path.abspath(os.getcwd())
         else:
             working_directory = Path(working_directory)
         if variable_dict is None:
-            testcase_config.variable_binds = variable_dict
+            self.config.variable_binds = variable_dict
         if test_file:
             self.__testcase_file.add(test_file)
 
+        testcase_config_object = TestCaseConfig()
         for testcase_node in testcase_list:
             if not isinstance(testcase_node, dict):
                 logger.warning("Skipping the configuration %s" % testcase_node)
@@ -99,11 +123,12 @@ class TestSet:
                     try:
                         group_object = TestSet.test_group_list_dict[__group_name]
                     except KeyError:
-                        group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP)
+                        group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
                         TestSet.test_group_list_dict[__group_name] = group_object
                     testcase_object = TestCase(
                         base_url=base_url, extract_binds=group_object.extract_binds,
-                        variable_binds=group_object.variable_binds, context=group_object.context
+                        variable_binds=group_object.variable_binds, context=group_object.context,
+                        config=group_object.config
                     )
                     testcase_object.url = testcase_node[key]
                     group_object.testcase_list = testcase_object
@@ -112,29 +137,29 @@ class TestSet:
                     with ChangeDir(working_directory):
                         __group_name = None
                         for node_dict in sub_testcase_node:
-                            __group_name = node_dict.get(TestCaseKeywords.group)
-                            if __group_name:
+                            if __group_name is None:
+                                __group_name = node_dict.get(TestCaseKeywords.group)
                                 break
+
                         __group_name = __group_name if __group_name else TestCaseGroup.DEFAULT_GROUP
                         try:
                             group_object = TestSet.test_group_list_dict[__group_name]
                         except KeyError:
-                            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP)
+                            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
                             TestSet.test_group_list_dict[__group_name] = group_object
 
                         testcase_object = TestCase(
                             base_url=base_url, extract_binds=group_object.extract_binds,
-                            variable_binds=group_object.variable_binds, context=group_object.context
+                            variable_binds=group_object.variable_binds, context=group_object.context,
+                            config=group_object.config
                         )
                         testcase_object.parse(sub_testcase_node)
                         group_object.testcase_list = testcase_object
 
-                elif key == YamlKeyWords.BENCHMARK:
-                    ...
-
                 elif key == YamlKeyWords.CONFIG:
-                    testcase_config_object = TestCaseConfig()
                     testcase_config_object.parse(sub_testcase_node)
+
+        self.config = testcase_config_object
 
         return
 
@@ -142,15 +167,19 @@ class TestSet:
 class TestCaseGroup:
     DEFAULT_GROUP = "NO GROUP"
 
-    def __init__(self, name, context=None, extract_binds=None, variable_binds=None):
+    def __init__(self, name, context=None, extract_binds=None, variable_binds=None, config=None):
         self.__testcase_list = []
         self.__benchmark_list = []
         self.__config = None
+
         self.__name = name
         self.__testcase_file = set()
         self.__context = context if context else Context()
         self.__extract_binds = extract_binds if extract_binds else {}
         self.__variable_binds = variable_binds if variable_binds else {}
+        self.__is_global = None
+
+        self.config = config
 
     @property
     def testcase_list(self):
@@ -159,6 +188,15 @@ class TestCaseGroup:
     @testcase_list.setter
     def testcase_list(self, testcase_object):
         self.__testcase_list.append(testcase_object)
+
+    @property
+    def is_global(self):
+        return self.__is_global
+
+    @is_global.setter
+    def is_global(self, val):
+        if self.__is_global is None:
+            self.__is_global = val
 
     @property
     def benchmark_list(self):
@@ -172,13 +210,32 @@ class TestCaseGroup:
     def extract_binds(self):
         return self.__extract_binds
 
+    @extract_binds.setter
+    def extract_binds(self, extract_dict):
+        self.__extract_binds.update(extract_dict)
+
     @property
     def variable_binds(self):
         return self.__variable_binds
 
+    @variable_binds.setter
+    def variable_binds(self, var_dict):
+        if isinstance(var_dict, dict):
+            self.__variable_binds.update(var_dict)
+
+    @property
+    def config(self):
+        return self.__config
+
+    @config.setter
+    def config(self, config_obj: TestCaseConfig):
+        self.__config = config_obj
+        self.variable_binds = config_obj.variable_binds
+
     @property
     def context(self):
         return self.__context
+
 
 
 class TestResult:
@@ -213,10 +270,11 @@ class TestCase:
 
     KEYWORD_DICT = {k: v for k, v in TestCaseKeywords.__dict__.items() if not k.startswith('__')}
 
-    def __init__(self, base_url, extract_binds, variable_binds, context=None):
+    def __init__(self, base_url, extract_binds, variable_binds, context=None, config=None):
         self.__base_url = base_url
         self.__url = None
         self.__body = None
+        self.__config = config if config else TestCaseConfig()
         self.__auth_username = None
         self.__auth_password = None
         self.__delay = 0
@@ -245,9 +303,20 @@ class TestCase:
 
         self.templates = {}
         self.result = None
+        self.config = config
 
     def __str__(self):
         return json.dumps(self, default=Parser.safe_to_json)
+
+    @property
+    def config(self) -> Optional[TestCaseConfig]:
+        return self.__config
+
+    @config.setter
+    def config(self, config_object: TestCaseConfig):
+        if config_object:
+            self.variable_binds.update(config_object.variable_binds)
+            self.generator_binds.update(config_object.generators)
 
     @property
     def auth_username(self):
@@ -311,6 +380,10 @@ class TestCase:
     def generator_binds(self):
         return self.__generator_binds_dict
 
+    @property
+    def delay(self):
+        return self.__delay
+
     @generator_binds.setter
     def generator_binds(self, value: Dict):
         binds_dict = Parser.flatten_dictionaries(value)
@@ -367,12 +440,17 @@ class TestCase:
         header_dict = {}
         for key, header in self.__header_dict.items():
             if isinstance(header, dict):
+                if key == 'template':
+                    for k, v in header.items():
+                        templated_string = string.Template(v).safe_substitute(context_values)
+                        header_dict[k] = templated_string
+                    continue
                 templated_value = header.get('template')
                 if templated_value:
                     templated_string = string.Template(templated_value).safe_substitute(context_values)
                     header_dict[key] = templated_string
                 else:
-                    header_dict[key] = header
+                    logger.warning("Skipping the header: %s. We don't support mapping as header" % header)
             else:
                 header_dict[key] = header
 
@@ -419,8 +497,7 @@ class TestCase:
             return None
         if not context.get_values():
             return None
-
-        val = self.templates[variable_name].substitute(context.get_values())
+        val = self.templates[variable_name].safe_substitute(context.get_values())
         return val
 
     def parse(self, testcase_dict):
@@ -543,6 +620,8 @@ class TestCase:
         curl_handler.setopt(pycurl.WRITEFUNCTION, body_byte.write)
         curl_handler.setopt(pycurl.HEADERFUNCTION, header_byte.write)
         curl_handler.setopt(pycurl.VERBOSE, self.__verbose)
+        if self.config.timeout:
+            curl_handler.setopt(pycurl.CONNECTTIMEOUT, self.config.timeout)
 
         if self.__ssl_insecure:
             curl_handler.setopt(pycurl.SSL_VERIFYPEER, 0)
@@ -641,3 +720,4 @@ class TestCase:
             self.__failure_list.append(
                 Failure(message=failure_message, details=None, failure_type=FAILURE_INVALID_RESPONSE)
             )
+        curl_handler.close()

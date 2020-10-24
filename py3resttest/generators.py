@@ -90,6 +90,7 @@ def factory_fixed_sequence(values):
         i = 0
         while True:
             yield my_list[i]
+            i += 1
             if i == len(my_list):
                 i = 0
 

@@ -1,6 +1,6 @@
 import operator
 import re
-from enum import Enum, unique
+from enum import Enum
 
 import pycurl
 
@@ -62,6 +62,7 @@ class TestCaseKeywords:
     generator_binds = 'generator_binds'
     validators = 'validators'
     options = 'options'
+    global_env = 'global_env'
 
 
 class EnumHttpMethod(Enum):
