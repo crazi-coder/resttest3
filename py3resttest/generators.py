@@ -2,9 +2,6 @@ import logging
 import os
 import random
 import string
-
-
-
 """ Collection of generators to be used in templating for test data
 
 Plans: extend these by allowing generators that take generators for input

@@ -26,6 +26,9 @@ logger = logging.getLogger('py3resttest')
 
 
 class TestCaseConfig:
+    """
+    Global configuration for a testset.
+    """
 
     def __init__(self):
         self.__variable_binds_dict = {}
@@ -40,6 +43,7 @@ class TestCaseConfig:
 
     @variable_binds.setter
     def variable_binds(self, variable_dict):
+        """Variable binding """
         if isinstance(variable_dict, dict):
             self.__variable_binds_dict.update(Parser.flatten_dictionaries(variable_dict))
 
@@ -238,7 +242,7 @@ class TestCaseGroup:
 
 class TestResult:
 
-    def __init__(self,  body, status_code):
+    def __init__(self, body, status_code):
         self.__headers = None
         self.__body = body
         self.__status_code = status_code
@@ -573,7 +577,6 @@ class TestCase:
             return True
         if isinstance(self.__body, ContentHandler) and self.__body.is_dynamic():
             return True
-        return False
 
     def render(self):
         if self.is_dynamic() or self.__context is not None:
