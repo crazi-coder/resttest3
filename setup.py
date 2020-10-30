@@ -2,8 +2,6 @@ from setuptools import setup, find_packages
 with open("requirements.txt") as fp:
     install_requires = [lib_str.strip() for lib_str in fp.read().split("\n") if not lib_str.startswith("#")]
 
-with open("requirements.txt") as fp:
-    test_dependencies = [lib_str.strip() for lib_str in fp.read().split("\n") if not lib_str.startswith("#")]
 
 setup(
     name='resttest3',
@@ -32,7 +30,7 @@ setup(
     python_requires='>=3.5',
     license='Apache License, Version 2.0',
     install_requires=install_requires,
-    tests_require=test_dependencies,
+    tests_require=install_requires,
     test_suite="py3resttest.tests",
     entry_points={
         'console_scripts': ['resttest3=py3resttest.runner:main'],

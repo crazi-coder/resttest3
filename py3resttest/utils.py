@@ -183,12 +183,6 @@ class Parser:
         # Note: HTTP headers are *case-insensitive* per RFC 2616
         return [(k.lower(), v) for k, v in header_msg.items()]
 
-
-
-
-
-
-
 def register_extensions(modules):
     """ Import the modules and register their respective extensions """
     if isinstance(modules, str):  # Catch supplying just a string arg

@@ -2,9 +2,6 @@ import logging
 import os
 import random
 import string
-
-
-
 """ Collection of generators to be used in templating for test data
 
 Plans: extend these by allowing generators that take generators for input
@@ -60,8 +57,9 @@ def generator_basic_ids():
 
 def generator_random_int32():
     """ Random integer generator for up to 32-bit signed ints """
+    system_random = random.SystemRandom()
     while True:
-        yield random.randint(0, INT32_MAX_VALUE)
+        yield system_random.randint(0, INT32_MAX_VALUE)
 
 
 def factory_generate_text(legal_characters=string.ascii_letters, min_length=8, max_length=8):
@@ -70,13 +68,14 @@ def factory_generate_text(legal_characters=string.ascii_letters, min_length=8, m
 
         For hex digits, combine with string.hexstring, etc
         """
+    system_random = random.SystemRandom()  # To Cryptographically secure random
 
     def generate_text():
         local_min_len = min_length
         local_max_len = max_length
         while True:
-            length = random.randint(local_min_len, local_max_len)
-            array = [random.choice(legal_characters) for _ in range(0, length)]
+            length = system_random.randint(local_min_len, local_max_len)
+            array = [system_random.choice(legal_characters) for _ in range(0, length)]
             yield ''.join(array)
 
     return generate_text
@@ -109,11 +108,12 @@ def parse_fixed_sequence(config):
 
 def factory_choice_generator(values):
     """ Return a generator that picks values from a list randomly """
+    system_random = random.SystemRandom()  # To Cryptographically secure random
 
     def choice_generator():
         my_list = list(values)
         while True:
-            yield random.choice(my_list)
+            yield system_random.choice(my_list)
 
     return choice_generator
 
@@ -121,9 +121,7 @@ def factory_choice_generator(values):
 def parse_choice_generator(config):
     """ Parse choice generator """
     vals = config['values']
-    if not vals:
-        raise ValueError('Values for choice sequence must exist')
-    if not isinstance(vals, list):
+    if not vals or (not isinstance(vals, list)):
         raise ValueError('Values must be a list of entries')
     return factory_choice_generator(vals)()
 

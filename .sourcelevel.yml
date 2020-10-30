@@ -1,0 +1,17 @@
+styleguide: sourcelevel/linters
+engines:
+  pep8:
+    enabled: true
+  fixme:
+    enabled: true
+  radon:
+    enabled: true
+  bandit:
+    enabled: true
+  remark-lint:
+    enabled: true
+  duplication:
+    enabled: true
+
+exclude_paths:
+  - tests
