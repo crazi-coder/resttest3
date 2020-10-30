@@ -63,7 +63,7 @@ class TestCaseKeywords:
     validators = 'validators'
     options = 'options'
     global_env = 'global_env'
-    absolute_urls = "absolute-url"
+    absolute_urls = 'absolute-url'
 
 
 class EnumHttpMethod(Enum):

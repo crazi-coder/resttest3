@@ -139,32 +139,32 @@ class TestSet:
 
                 elif key == YamlKeyWords.TEST:
                     with ChangeDir(working_directory):
-                        __group_name = None
-                        for node_dict in sub_testcase_node:
-                            if __group_name is None:
-                                __group_name = node_dict.get(TestCaseKeywords.group)
-
-                        __group_name = __group_name if __group_name else TestCaseGroup.DEFAULT_GROUP
-                        try:
-                            group_object = TestSet.test_group_list_dict[__group_name]
-                        except KeyError:
-                            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
-                            TestSet.test_group_list_dict[__group_name] = group_object
-
-                        testcase_object = TestCase(
-                            base_url=base_url, extract_binds=group_object.extract_binds,
-                            variable_binds=group_object.variable_binds, context=group_object.context,
-                            config=group_object.config
-                        )
-                        testcase_object.parse(sub_testcase_node)
-                        group_object.testcase_list = testcase_object
+                        self.parse_test(base_url, sub_testcase_node, testcase_config_object)
 
                 elif key == YamlKeyWords.CONFIG:
                     testcase_config_object.parse(sub_testcase_node)
 
         self.config = testcase_config_object
 
-        return
+    @staticmethod
+    def parse_test(base_url, sub_testcase_node, testcase_config_object):
+        __group_name = None
+        for node_dict in sub_testcase_node:
+            if __group_name is None:
+                __group_name = node_dict.get(TestCaseKeywords.group)
+        __group_name = __group_name if __group_name else TestCaseGroup.DEFAULT_GROUP
+        try:
+            group_object = TestSet.test_group_list_dict[__group_name]
+        except KeyError:
+            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
+            TestSet.test_group_list_dict[__group_name] = group_object
+        testcase_object = TestCase(
+            base_url=base_url, extract_binds=group_object.extract_binds,
+            variable_binds=group_object.variable_binds, context=group_object.context,
+            config=group_object.config
+        )
+        testcase_object.parse(sub_testcase_node)
+        group_object.testcase_list = testcase_object
 
 
 class TestCaseGroup:
@@ -482,8 +482,7 @@ class TestCase:
     def body(self):
         if isinstance(self.__body, str) or self.__body is None:
             return self.__body
-        else:
-            return self.__body.get_content(context=self.__context)
+        return self.__body.get_content(context=self.__context)
 
     @body.setter
     def body(self, value):
@@ -553,15 +552,12 @@ class TestCase:
             if self.http_method in ["POST", "PUT", "DELETE"]:
                 self.expected_http_status_code_list = [200, 201, 204]
 
-        return
-
     def pre_update(self, context):
         if self.variable_binds:
             context.bind_variables(self.variable_binds)
         if self.generator_binds:
             for key, value in self.generator_binds.items():
                 context.bind_generator_next(key, value)
-        return
 
     def post_update(self, context):
         if self.extract_binds:
@@ -570,20 +566,16 @@ class TestCase:
                     body=self.body, headers=self.headers, context=context)
                 if result:
                     context.bind_variable(key, result)
-        return
 
     def is_dynamic(self):
-        if self.templates:
+        if self.templates or (isinstance(self.__body, ContentHandler) and self.__body.is_dynamic()):
             return True
-        if isinstance(self.__body, ContentHandler) and self.__body.is_dynamic():
-            return True
+        return False
 
     def render(self):
         if self.is_dynamic() or self.__context is not None:
             if isinstance(self.__body, ContentHandler):
                 self.__body = self.__body.get_content(self.__context)
-
-        return
 
     def __perform_validation(self) -> List:
 
@@ -621,13 +613,7 @@ class TestCase:
         else:
             curl_handler = pycurl.Curl()
 
-        body_byte = BytesIO()
-        header_byte = BytesIO()
-        curl_handler.setopt(curl_handler.URL, str(self.url))
-        curl_handler.setopt(curl_handler.TIMEOUT, timeout)
-        curl_handler.setopt(pycurl.WRITEFUNCTION, body_byte.write)
-        curl_handler.setopt(pycurl.HEADERFUNCTION, header_byte.write)
-        curl_handler.setopt(pycurl.VERBOSE, self.__verbose)
+        body_byte, header_byte = self.__default_curl_config(curl_handler, timeout)
         if self.config.timeout:
             curl_handler.setopt(pycurl.CONNECTTIMEOUT, self.config.timeout)
 
@@ -642,44 +628,10 @@ class TestCase:
         if self.auth_username and self.auth_password:
             curl_handler.setopt(pycurl.USERPWD, self.auth_username + ':' + self.auth_password)
 
-        body_length = len(self.body) if self.body else 0
-        if self.http_method == EnumHttpMethod.POST.name:
-            curl_handler.setopt(EnumHttpMethod.POST.value, 1)
-            curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
-
-        elif self.http_method == EnumHttpMethod.PUT.name:
-            curl_handler.setopt(EnumHttpMethod.PUT.value, 1)
-            curl_handler.setopt(pycurl.INFILESIZE, body_length)
-
-        elif self.http_method == EnumHttpMethod.PATCH.name:
-            curl_handler.setopt(EnumHttpMethod.PATCH.value, EnumHttpMethod.PATCH.name)
-            curl_handler.setopt(pycurl.POSTFIELDS, self.body)
-
-        elif self.http_method == EnumHttpMethod.DELETE.name:
-            curl_handler.setopt(EnumHttpMethod.DELETE.value, EnumHttpMethod.DELETE.name)
-            if self.body:
-                curl_handler.setopt(pycurl.POSTFIELDS, self.body)
-                curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
-
-        elif self.http_method == EnumHttpMethod.HEAD.name:
-            curl_handler.setopt(pycurl.NOBODY, 1)
-            curl_handler.setopt(EnumHttpMethod.HEAD.value, EnumHttpMethod.HEAD.name)
-        else:
-            curl_handler.setopt(pycurl.CUSTOMREQUEST, self.http_method.upper())
-            if self.body:
-                curl_handler.setopt(pycurl.POSTFIELDS, self.body)
-                curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
+        self.__configure_curl_method(curl_handler)
 
         head = self.headers
-        if head.get('content-type'):
-            content_type = head['content-type']
-            head[u'content-type'] = content_type + ' ; charset=UTF-8'
-
-        headers = [str(header_name) + ':' + str(header_value) for header_name, header_value in head.items()]
-        headers.append("Expect:")
-        headers.append("Connection: close")
-        logger.debug("Request headers %s " % head)
-        curl_handler.setopt(curl_handler.HTTPHEADER, headers)
+        self.__configure_curl_headers(curl_handler, head)
 
         if self.__delay:
             time.sleep(self.__delay)
@@ -694,14 +646,12 @@ class TestCase:
             self.__failure_list.append(
                 Failure(message="Curl Exception: {0}".format(e), details=trace, failure_type=FAILURE_CURL_EXCEPTION))
             return
-        body = body_byte.getvalue()
+        self.body = body_byte.getvalue()
         body_byte.close()
-        logger.debug("RESPONSE: %s" % self.body)
         response_code = curl_handler.getinfo(pycurl.RESPONSE_CODE)
-        self.body = body
         self.__response_code = int(response_code)
         if self.config.print_bodies:
-            print(body)
+            print(self.body)
         try:
             response_headers = Parser.parse_headers(header_byte.getvalue())
             self.__response_headers = response_headers
@@ -730,3 +680,53 @@ class TestCase:
                 Failure(message=failure_message, details=None, failure_type=FAILURE_INVALID_RESPONSE)
             )
         curl_handler.close()
+
+    @staticmethod
+    def __configure_curl_headers(curl_handler, head):
+        if head.get('content-type'):
+            content_type = head['content-type']
+            head[u'content-type'] = '%s ; charset=UTF-8' % content_type
+        headers = ["%s:%s" % (header_name, header_value) for header_name, header_value in head.items()]
+        headers.append("Expect:")
+        headers.append("Connection: close")
+        logger.debug("Request headers %s " % head)
+        curl_handler.setopt(curl_handler.HTTPHEADER, headers)
+
+    def __configure_curl_method(self, curl_handler):
+        body_length = len(self.body) if self.body else 0
+        if self.http_method == EnumHttpMethod.POST.name:
+            curl_handler.setopt(EnumHttpMethod.POST.value, 1)
+            curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
+
+        elif self.http_method == EnumHttpMethod.PUT.name:
+            curl_handler.setopt(EnumHttpMethod.PUT.value, 1)
+            curl_handler.setopt(pycurl.INFILESIZE, body_length)
+
+        elif self.http_method == EnumHttpMethod.PATCH.name:
+            curl_handler.setopt(EnumHttpMethod.PATCH.value, EnumHttpMethod.PATCH.name)
+            curl_handler.setopt(pycurl.POSTFIELDS, self.body)
+
+        elif self.http_method == EnumHttpMethod.DELETE.name:
+            curl_handler.setopt(EnumHttpMethod.DELETE.value, EnumHttpMethod.DELETE.name)
+            if self.body:
+                curl_handler.setopt(pycurl.POSTFIELDS, self.body)
+                curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
+
+        elif self.http_method == EnumHttpMethod.HEAD.name:
+            curl_handler.setopt(pycurl.NOBODY, 1)
+            curl_handler.setopt(EnumHttpMethod.HEAD.value, EnumHttpMethod.HEAD.name)
+        else:
+            curl_handler.setopt(pycurl.CUSTOMREQUEST, self.http_method.upper())
+            if self.body:
+                curl_handler.setopt(pycurl.POSTFIELDS, self.body)
+                curl_handler.setopt(pycurl.POSTFIELDSIZE, body_length)
+
+    def __default_curl_config(self, curl_handler, timeout):
+        body_byte = BytesIO()
+        header_byte = BytesIO()
+        curl_handler.setopt(curl_handler.URL, str(self.url))
+        curl_handler.setopt(curl_handler.TIMEOUT, timeout)
+        curl_handler.setopt(pycurl.WRITEFUNCTION, body_byte.write)
+        curl_handler.setopt(pycurl.HEADERFUNCTION, header_byte.write)
+        curl_handler.setopt(pycurl.VERBOSE, self.__verbose)
+        return body_byte, header_byte
