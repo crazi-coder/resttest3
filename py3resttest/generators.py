@@ -57,8 +57,9 @@ def generator_basic_ids():
 
 def generator_random_int32():
     """ Random integer generator for up to 32-bit signed ints """
+    system_random = random.SystemRandom()
     while True:
-        yield random.randint(0, INT32_MAX_VALUE)
+        yield system_random.randint(0, INT32_MAX_VALUE)
 
 
 def factory_generate_text(legal_characters=string.ascii_letters, min_length=8, max_length=8):
@@ -67,13 +68,13 @@ def factory_generate_text(legal_characters=string.ascii_letters, min_length=8, m
 
         For hex digits, combine with string.hexstring, etc
         """
-
+    system_random = random.SystemRandom()  # To Cryptographically secure random
     def generate_text():
         local_min_len = min_length
         local_max_len = max_length
         while True:
-            length = random.randint(local_min_len, local_max_len)
-            array = [random.choice(legal_characters) for _ in range(0, length)]
+            length = system_random.randint(local_min_len, local_max_len)
+            array = [system_random.choice(legal_characters) for _ in range(0, length)]
             yield ''.join(array)
 
     return generate_text
