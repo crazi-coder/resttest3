@@ -69,6 +69,7 @@ def factory_generate_text(legal_characters=string.ascii_letters, min_length=8, m
         For hex digits, combine with string.hexstring, etc
         """
     system_random = random.SystemRandom()  # To Cryptographically secure random
+
     def generate_text():
         local_min_len = min_length
         local_max_len = max_length
@@ -107,11 +108,12 @@ def parse_fixed_sequence(config):
 
 def factory_choice_generator(values):
     """ Return a generator that picks values from a list randomly """
+    system_random = random.SystemRandom()  # To Cryptographically secure random
 
     def choice_generator():
         my_list = list(values)
         while True:
-            yield random.choice(my_list)
+            yield system_random.choice(my_list)
 
     return choice_generator
 
