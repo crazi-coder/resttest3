@@ -118,9 +118,7 @@ def factory_choice_generator(values):
 def parse_choice_generator(config):
     """ Parse choice generator """
     vals = config['values']
-    if not vals:
-        raise ValueError('Values for choice sequence must exist')
-    if not isinstance(vals, list):
+    if not vals or (not isinstance(vals, list)):
         raise ValueError('Values must be a list of entries')
     return factory_choice_generator(vals)()
 

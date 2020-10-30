@@ -26,15 +26,18 @@ class JsonSchemaValidator(AbstractValidator):
             jsonschema.validate(json.loads(body), schema)
             return True
         except jsonschema.exceptions.ValidationError:
-            trace = traceback.format_exc()
-            return Failure(message="JSON Schema Validation Failed", details=trace, validator=self,
-                           failure_type=FAILURE_VALIDATOR_EXCEPTION)
+            return self.__failed("JSON Schema Validation Failed")
         except json.decoder.JSONDecodeError:
             trace = traceback.format_exc()
-            return Failure(message="Invalid response json body", details=trace, validator=self,
-                           failure_type=FAILURE_VALIDATOR_EXCEPTION)
+            return self.__failed("Invalid response json body")
 
-    def get_readable_config(self, context=None):
+    def __failed(self, message):
+        trace = traceback.format_exc()
+        return Failure(message=message, details=trace, validator=self,
+                       failure_type=FAILURE_VALIDATOR_EXCEPTION)
+
+    @staticmethod
+    def get_readable_config(context=None):
         return "JSON schema validation"
 
     @classmethod
