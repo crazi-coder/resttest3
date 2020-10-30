@@ -163,7 +163,8 @@ class HeaderExtractor(AbstractExtractor):
         extracted = [y[1] for y in filter(lambda x: x[0] == low, headers)]
         if len(extracted) == 0:
             raise ValueError("Invalid header name {0}".format(query))
-        elif len(extracted) == 1:
+        # Fix #19
+        if len(extracted) == 1:
             return extracted[0]
         else:
             return extracted
