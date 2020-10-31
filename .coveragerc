@@ -1,6 +1,8 @@
 # .coveragerc to control coverage.py
 [run]
 branch = True
+omit = py3resttest/runner.py
+
 command_line = --source py3resttest -m pytest tests/test_*.py
 [paths]
 source =
