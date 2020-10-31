@@ -124,11 +124,7 @@ class TestSet:
                             self.parse(base_url, import_testcase_list, variable_dict=variable_dict)
                 elif key == YamlKeyWords.URL:
                     __group_name = TestCaseGroup.DEFAULT_GROUP
-                    try:
-                        group_object = TestSet.test_group_list_dict[__group_name]
-                    except KeyError:
-                        group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
-                        TestSet.test_group_list_dict[__group_name] = group_object
+                    group_object = TestSet.__create_test(__group_name, testcase_config_object)
                     testcase_object = TestCase(
                         base_url=base_url, extract_binds=group_object.extract_binds,
                         variable_binds=group_object.variable_binds, context=group_object.context,
@@ -153,11 +149,7 @@ class TestSet:
             if __group_name is None:
                 __group_name = node_dict.get(TestCaseKeywords.group)
         __group_name = __group_name if __group_name else TestCaseGroup.DEFAULT_GROUP
-        try:
-            group_object = TestSet.test_group_list_dict[__group_name]
-        except KeyError:
-            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
-            TestSet.test_group_list_dict[__group_name] = group_object
+        group_object = TestSet.__create_test(__group_name, testcase_config_object)
         testcase_object = TestCase(
             base_url=base_url, extract_binds=group_object.extract_binds,
             variable_binds=group_object.variable_binds, context=group_object.context,
@@ -165,6 +157,15 @@ class TestSet:
         )
         testcase_object.parse(sub_testcase_node)
         group_object.testcase_list = testcase_object
+
+    @staticmethod
+    def __create_test(__group_name, testcase_config_object):
+        try:
+            group_object = TestSet.test_group_list_dict[__group_name]
+        except KeyError:
+            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
+            TestSet.test_group_list_dict[__group_name] = group_object
+        return group_object
 
 
 class TestCaseGroup:
