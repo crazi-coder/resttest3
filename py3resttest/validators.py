@@ -197,9 +197,8 @@ def _get_extractor(config_dict):
     for key, value in config_dict.items():
         if key in EXTRACTORS:
             return parse_extractor(key, value)
-    else:  # No valid extractor
-        raise Exception(
-            'No valid extractor name to use in input: {0}'.format(config_dict))
+    raise Exception(
+        'No valid extractor name to use in input: {0}'.format(config_dict))
 
 
 class AbstractValidator(metaclass=ABCMeta):
