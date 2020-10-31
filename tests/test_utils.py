@@ -1,7 +1,10 @@
 import os
+import sys
 import unittest
 from inspect import currentframe, getframeinfo
 from pathlib import Path
+
+import pytest
 
 from py3resttest.utils import ChangeDir, read_testcase_file, Parser
 
@@ -69,6 +72,7 @@ class TestCaseUtils(unittest.TestCase):
         result_dict = Parser.flatten_dictionaries([{'x': 2}, input_dict])
         self.assertEqual(input_dict, result_dict)
 
+    @pytest.mark.skipif(sys.version_info < (3, 7), reason="requires python3.7")
     def test_flatten_lowercase_keys_dict(self):
         input_dict = {"x": 1, "y": 2}
         result_dict = Parser.flatten_lowercase_keys_dict([{'x': 2}, input_dict])
