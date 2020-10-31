@@ -115,6 +115,31 @@ class TestTestCase(unittest.TestCase):
             }
         ]
         self.assertRaises(TypeError, config_object.parse, config_list)
+        test_case = TestCase('https://api.github.com', None, None)
+        testcase_list = [
+            {'name': 'Get github user abihijo89-to'},
+            {'url': '/search/users?q=abhijo89-to'},
+            {'method': 'GET'},
+            {'headers': {'Content-Type': 'application/json'}},
 
-        if __name__ == '__main__':
-            unittest.main()
+        ]
+
+        test_case.parse(testcase_list)
+        test_case.run()
+        self.assertTrue(test_case.is_passed)
+
+    def test_include(self):
+        with open("%s/content-test-include.yaml" % current_module_path.parent, 'r') as f:
+            test_dict_list = yaml.safe_load(f.read())
+
+            ts = TestSet()
+            ts.parse('', test_dict_list)
+            self.assertEqual(1, len(ts.test_group_list_dict))
+            ts.parse('', [{'url': 'http://google.com'}])
+            self.assertEqual(1, len(ts.test_group_list_dict))
+            ts.parse('', [{'import': 'tests/content-test.yaml'}])
+            self.assertEqual(1, len(ts.test_group_list_dict))
+
+
+if __name__ == '__main__':
+    unittest.main()

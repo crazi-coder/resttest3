@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-
+import string
 import unittest
 
-from py3resttest.exception import BindError, HttpMethodError, ValidatorError
-from py3resttest.validators import ComparatorValidator, ExtractTestValidator
 from pytest import fail
 
 from py3resttest import generators
 from py3resttest.binding import Context
+from py3resttest.contenthandling import ContentHandler
+from py3resttest.exception import BindError, HttpMethodError, ValidatorError
 from py3resttest.testcase import TestCase
+from py3resttest.validators import ComparatorValidator, ExtractTestValidator
 
 
 class TestsTest(unittest.TestCase):
@@ -210,18 +211,18 @@ class TestsTest(unittest.TestCase):
         test = TestCase('', None, None, context)
         test.parse(test_config)
         test.pre_update(context)
-        # self.assertTrue(test.extract_binds)
-        # self.assertEqual(2, len(test.extract_binds))
-        # self.assertTrue('id' in test.extract_binds)
-        # self.assertTrue('name' in test.extract_binds)
+        self.assertTrue(test.extract_binds)
+        self.assertEqual(2, len(test.extract_binds))
+        self.assertTrue('id' in test.extract_binds)
+        self.assertTrue('name' in test.extract_binds)
         #
-        # # Test extractors config'd correctly for extraction
-        # myjson = '{"idfield": 3, "firstname": "bob"}'
-        # extracted = test.extract_binds['id'].extract(myjson)
-        # self.assertEqual(3, extracted)
+        # Test extractors config'd correctly for extraction
+        myjson = '{"idfield": 3, "firstname": "bob"}'
+        extracted = test.extract_binds['id'].extract(myjson)
+        self.assertEqual(3, extracted)
         #
-        # extracted = test.extract_binds['name'].extract(myjson)
-        # self.assertEqual('bob', extracted)
+        extracted = test.extract_binds['name'].extract(myjson)
+        self.assertEqual('bob', extracted)
 
     def test_parse_extractor_errors(self):
         """ Test that expected errors are thrown on parsing """
@@ -292,9 +293,11 @@ class TestsTest(unittest.TestCase):
     def test_variable_binding(self):
         """ Test that tests successfully bind variables """
         element = 3
-        test_config = [{"url": "/ping"}, {"name": "cheese"},
-                 {"expected_status": ["200", 204, "202"]}]
-        test_config.append({"variable_binds": {'var': 'value'}})
+        test_config = [
+            {"url": "/ping"}, {"name": "cheese"},
+            {"expected_status": ["200", 204, "202"]},
+            {"variable_binds": {'var': 'value'}}
+        ]
         context = Context()
         test = TestCase('', None, context)
         test.parse(test_config)
@@ -307,59 +310,38 @@ class TestsTest(unittest.TestCase):
         test.pre_update(context)
         self.assertEqual('value', context.get_value('var'))
 
+    def test_url_templating(self):
+        context = Context()
+        test = TestCase('', None, None, context)
+        test.url = {'template': "$cheese"}
+        self.assertTrue(test.is_dynamic())
+        self.assertEqual({'template': '$cheese'}, test.url)
+        self.assertTrue(test.templates['url'])
+        context.bind_variable('cheese', 'liquid_cheese')
+        self.assertEqual('liquid_cheese', test.url)
 
-    # def test_test_url_templating(self):
-    #     test = Test()
-    #     test.set_url('$cheese', isTemplate=True)
-    #     self.assertTrue(test.is_dynamic())
-    #     self.assertEqual('$cheese', test.get_url())
-    #     self.assertTrue(test.templates['url'])
-    #
-    #     context = Context()
-    #     context.bind_variable('cheese', 'stilton')
-    #     self.assertEqual('stilton', test.get_url(context=context))
-    #
-    #     realized = test.realize(context)
-    #     self.assertEqual('stilton', realized.url)
+    def test_test_content_templating(self):
+        context = Context()
+        test = TestCase('', None, None, context)
+        handler = ContentHandler()
+        handler.is_template_content = True
+        handler.content = '{"first_name": "Gaius","id": "$id","last_name": "Baltar","login": "$login"}'
+        context.bind_variables({'id': 9, 'login': 'username'})
+        test.body = handler
+        test.pre_update(context=context)
+        self.assertEqual(string.Template(handler.content).safe_substitute(context.get_values()),
+                         test.body)
 
-    # def test_test_content_templating(self):
-    #     test = Test()
-    #     handler = ContentHandler()
-    #     handler.is_template_content = True
-    #     handler.content = '{"first_name": "Gaius","id": "$id","last_name": "Baltar","login": "$login"}'
-    #     context = Context()
-    #     context.bind_variables({'id': 9, 'login': 'kvothe'})
-    #     test.set_body(handler)
-    #
-    #     templated = test.realize(context=context)
-    #     self.assertEqual(string.Template(handler.content).safe_substitute(context.get_values()),
-    #                      templated.body)
+    def test_header_templating(self):
+        context = Context()
+        test = TestCase('', None, None, context)
+        head_templated = {'x': {'template': "$val"}}
 
-    # def test_header_templating(self):
-    #     test = Test()
-    #     head_templated = {'$key': "$val"}
-    #     context = Context()
-    #     context.bind_variables({'key': 'cheese', 'val': 'gouda'})
-    #
-    #     # No templating applied
-    #     test.headers = head_templated
-    #     head = test.get_headers()
-    #     self.assertEqual(1, len(head))
-    #     self.assertEqual('$val', head['$key'])
-    #
-    #     test.set_headers(head_templated, is_template=True)
-    #     self.assertTrue(test.templates)
-    #     self.assertTrue(test.NAME_HEADERS in test.templates)
-    #
-    #     # No context, no templating
-    #     head = test.headers
-    #     self.assertEqual(1, len(head))
-    #     self.assertEqual('$val', head['$key'])
-    #
-    #     # Templated with context
-    #     head = test.get_headers(context=context)
-    #     self.assertEqual(1, len(head))
-    #     self.assertEqual('gouda', head['cheese'])
+        context.bind_variables({'val': 'gouda'})
+        # No templating applied
+        test.headers = head_templated
+        self.assertEqual(1, len(test.headers))
+        self.assertEqual('gouda', test.headers['x'])
 
     def test_update_context_variables(self):
         variable_binds = {'foo': 'correct', 'test': 'value'}
