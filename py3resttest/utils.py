@@ -5,7 +5,7 @@ import threading
 from email import message_from_string
 from functools import reduce
 from pathlib import Path
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Any
 
 import yaml
 
@@ -98,7 +98,7 @@ class Parser:
         return {str(k).lower(): v for k, v in input_dict.items()}
 
     @staticmethod
-    def flatten_lowercase_keys_dict(input_dict: Union[Dict, List[Dict]]):
+    def flatten_lowercase_keys_dict(input_dict: Any):
         """ Take input and if a dictionary, return version with keys all lowercase and cast to str """
         if isinstance(input_dict, list):
             output_dict = Parser.flatten_dictionaries(input_dict)
