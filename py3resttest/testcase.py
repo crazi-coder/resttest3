@@ -108,7 +108,7 @@ class TestSet:
                         raise ValueError("include should be list not %s" % type(sub_testcase_node))
                     for testcase_file_path in sub_testcase_node:
                         testcase_file_path = testcase_file_path.replace('.', '/')
-                        testcase_file = working_directory.joinpath("%s.yaml" % testcase_file_path).resolve()
+                        testcase_file = str(working_directory.joinpath("%s.yaml" % testcase_file_path).resolve())
                         if testcase_file not in self.__testcase_file:
                             self.__testcase_file.add(testcase_file)
                             import_testcase_list = read_testcase_file(testcase_file)
@@ -118,7 +118,7 @@ class TestSet:
                     if sub_testcase_node not in self.__testcase_file:
                         testcase_file_path = sub_testcase_node
                         logger.debug("Importing testcase from %s", testcase_file_path)
-                        testcase_file_path = working_directory.joinpath("%s" % testcase_file_path).resolve()
+                        testcase_file_path = str(working_directory.joinpath("%s" % testcase_file_path).resolve())
                         self.__testcase_file.add(sub_testcase_node)
                         import_testcase_list = read_testcase_file(testcase_file_path)
                         with ChangeDir(working_directory):
