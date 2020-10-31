@@ -387,7 +387,7 @@ class ExtractTestValidator(AbstractValidator):
             context=context), validator=self, failure_type=FAILURE_VALIDATOR_FAILED)
         failure.message = "Extract and test validator failed on test: {0}({1})".format(
             self.test_name, extracted)
-        # TODO can we do better with details?
+        # can we do better with details?
         return failure
 
 
