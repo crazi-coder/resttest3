@@ -107,7 +107,7 @@ class ContentHandler:
             is_done = True
 
             # Dictionary or list of dictionaries
-            flat = Parser.lowercase_keys(Parser.flatten_dictionaries(node))
+            flat = Parser.flatten_lowercase_keys_dict(node)
             for key, value in flat.items():
                 if key == 'template':
                     if isinstance(value, str):
