@@ -232,16 +232,8 @@ def parse_generator(configuration):
     elif gen_type == 'env_string':
         return factory_env_string(configuration['string'])()
     elif gen_type == 'number_sequence':
-        start = configuration.get('start')
-        increment = configuration.get('increment')
-        if not start:
-            start = 1
-        else:
-            start = int(start)
-        if not increment:
-            increment = 1
-        else:
-            increment = int(increment)
+        start = int(configuration.get('start', 1))
+        increment = int(configuration.get('increment', 1))
         return factory_generate_ids(start, increment)()
     elif gen_type == 'random_int':
         return generator_random_int32()
