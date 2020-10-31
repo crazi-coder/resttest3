@@ -5,7 +5,7 @@ engines:
   fixme:
     enabled: true
   radon:
-    enabled: true
+    enabled: false
   bandit:
     enabled: true
   remark-lint:
