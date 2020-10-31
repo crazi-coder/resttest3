@@ -72,6 +72,11 @@ class TestCaseUtils(unittest.TestCase):
         result_dict = Parser.flatten_dictionaries([{'x': 2}, input_dict])
         self.assertEqual(input_dict, result_dict)
 
+    def test_flatten_lowercase_keys(self):
+        input_dict = "22"  # unexpected
+        result_dict = Parser.flatten_lowercase_keys_dict(input_dict)
+        self.assertEqual("22", result_dict)
+
     @pytest.mark.skipif(sys.version_info < (3, 7), reason="requires python3.7")
     def test_flatten_lowercase_keys_dict(self):
         input_dict = {"x": 1, "y": 2}
