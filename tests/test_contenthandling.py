@@ -133,6 +133,9 @@ class ContentHandlerTest(unittest.TestCase):
         self.assertFalse(handler.is_template_path)
         self.assertFalse(handler.is_template_content)
 
+        node = 2
+        self.assertRaises(TypeError, ContentHandler.parse_content, node)
+
     def test_parse_content_file(self):
         """ Test parsing of file content """
         node = {'file': '/myval'}
