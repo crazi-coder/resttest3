@@ -52,10 +52,9 @@ class Parser:
         """
         if isinstance(my_string, (bytearray, bytes)):
             return my_string
-        else:
-            my_string = str(my_string)
-            my_string = my_string.encode('utf-8')
 
+        my_string = str(my_string)
+        my_string = my_string.encode('utf-8')
         return my_string
 
     @staticmethod
@@ -75,8 +74,8 @@ class Parser:
             return {k: v for k, v in in_obj.__dict__.items() if not k.startswith('__')}
         elif isinstance(in_obj, str):
             return in_obj
-        else:
-            return repr(in_obj)
+
+        return repr(in_obj)
 
     @staticmethod
     def flatten_dictionaries(input_dict: Union[Dict, List[Dict]]):
@@ -110,19 +109,19 @@ class Parser:
         return output_dict
 
     @staticmethod
-    def safe_to_bool(vaule):
+    def safe_to_bool(value):
         """ Safely convert user input to a boolean, throwing exception if not boolean or boolean-appropriate string
           For flexibility, we allow case insensitive string matching to false/true values
           If it's not a boolean or string that matches 'false' or 'true' when ignoring case, throws an exception """
-        if isinstance(vaule, bool):
-            return vaule
-        elif isinstance(vaule, str) and vaule.lower() == 'false':
+        if isinstance(value, bool):
+            return value
+        elif isinstance(value, str) and value.lower() == 'false':
             return False
-        elif isinstance(vaule, str) and vaule.lower() == 'true':
+        elif isinstance(value, str) and value.lower() == 'true':
             return True
-        else:
-            raise TypeError(
-                'Input Object is not a boolean or string form of boolean!')
+
+        raise TypeError(
+            'Input Object is not a boolean or string form of boolean!')
 
     @staticmethod
     def coerce_to_string(val):
@@ -132,8 +131,7 @@ class Parser:
             return str(val)
         elif isinstance(val, (bytes, bytearray)):
             return val.decode('utf-8')
-        else:
-            raise TypeError("Input {0} is not a string or integer, and it needs to be!".format(val))
+        raise TypeError("Input {0} is not a string or integer, and it needs to be!".format(val))
 
     @staticmethod
     def coerce_string_to_ascii(val):
@@ -141,8 +139,7 @@ class Parser:
             return val.encode('ascii')
         elif isinstance(val, bytes):
             return val.decode('utf-8').encode('ascii')
-        else:
-            raise TypeError("Input {0} is not a string, string expected".format(val))
+        raise TypeError("Input {0} is not a string, string expected".format(val))
 
     @staticmethod
     def coerce_http_method(val):
@@ -160,8 +157,8 @@ class Parser:
         """ If single value, try to parse as integer, else try to parse as list of integer """
         if isinstance(val, list):
             return [int(x) for x in val]
-        else:
-            return [int(val)]
+
+        return [int(val)]
 
     @staticmethod
     def parse_headers(header_string):

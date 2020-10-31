@@ -179,8 +179,8 @@ def parse_random_text_generator(configuration):
     if characters:
         return factory_generate_text(
             legal_characters=characters, min_length=min_length, max_length=max_length)()
-    else:
-        return factory_generate_text(min_length=min_length, max_length=max_length)()
+
+    return factory_generate_text(min_length=min_length, max_length=max_length)()
 
 
 # List of valid generator types
@@ -249,5 +249,5 @@ def parse_generator(configuration):
         return parse_random_text_generator(configuration)
     elif gen_type in GENERATOR_TYPES:
         return GENERATOR_PARSING[gen_type](configuration)
-    else:
-        raise Exception("Unknown generator type: {0}".format('gen_type'))
+
+    raise Exception("Unknown generator type: {0}".format('gen_type'))

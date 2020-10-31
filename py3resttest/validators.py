@@ -73,8 +73,7 @@ class AbstractExtractor(metaclass=ABCMeta):
             query = string.Template(self.query).safe_substitute(
                 context.get_values())
             return query
-        else:
-            return self.query
+        return self.query
 
     def get_readable_config(self, context=None):
         """ Print a human-readable version of the configuration """
@@ -278,8 +277,8 @@ class ComparatorValidator(AbstractValidator):
             failure.details = self.get_readable_config(context=context)
             failure.failure_type = FAILURE_VALIDATOR_FAILED
             return failure
-        else:
-            return True
+
+        return True
 
     @staticmethod
     def parse(config):
@@ -383,13 +382,13 @@ class ExtractTestValidator(AbstractValidator):
         tested = self.test_fn(extracted)
         if tested:
             return True
-        else:
-            failure = Failure(details=self.get_readable_config(
-                context=context), validator=self, failure_type=FAILURE_VALIDATOR_FAILED)
-            failure.message = "Extract and test validator failed on test: {0}({1})".format(
-                self.test_name, extracted)
-            # TODO can we do better with details?
-            return failure
+
+        failure = Failure(details=self.get_readable_config(
+            context=context), validator=self, failure_type=FAILURE_VALIDATOR_FAILED)
+        failure.message = "Extract and test validator failed on test: {0}({1})".format(
+            self.test_name, extracted)
+        # can we do better with details?
+        return failure
 
 
 def parse_extractor(extractor_type, config):
@@ -413,9 +412,8 @@ def parse_extractor(extractor_type, config):
     items = AbstractExtractor().__dict__
     if set(parsed.__dict__.keys()).issuperset(set(items.keys())):
         return parsed
-    else:
-        raise TypeError(
-            "Parsing functions for extractors must return an AbstractExtractor instance!")
+
+    raise TypeError("Parsing functions for extractors must return an AbstractExtractor instance!")
 
 
 def parse_validator(name, config_node):
