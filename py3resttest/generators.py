@@ -161,12 +161,13 @@ def parse_random_text_generator(configuration):
                 "Illegal character set name, is not defined: {0}".format(character_set))
         characters = CHARACTER_SETS[character_set]
     else:  # Custom characters listing, not a character set
-        characters = str(configuration.get('characters'))
+        characters = configuration.get('characters')
 
     min_length = int(configuration.get('min_length', 8))
     max_length = int(configuration.get('max_length', 8))
     if not characters:
         return factory_generate_text(min_length=min_length, max_length=max_length)()
+    characters = str(characters)
 
     if configuration.get('length'):
         length = int(configuration.get('length'))

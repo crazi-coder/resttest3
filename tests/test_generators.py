@@ -205,6 +205,11 @@ class GeneratorTest(unittest.TestCase):
                 "Should never parse an invalid character_set successfully, but did!")
         except ValueError:
             pass
+        test_config = {'type': 'random_text'}
+        try:
+            gen = generators.parse_generator(test_config)
+        except Exception:
+            self.fail("Should never Raise an exception!")
 
         # Test for character set handling
         for charset in generators.CHARACTER_SETS:
