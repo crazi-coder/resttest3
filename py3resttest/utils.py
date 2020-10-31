@@ -131,8 +131,7 @@ class Parser:
             return str(val)
         elif isinstance(val, (bytes, bytearray)):
             return val.decode('utf-8')
-        else:
-            raise TypeError("Input {0} is not a string or integer, and it needs to be!".format(val))
+        raise TypeError("Input {0} is not a string or integer, and it needs to be!".format(val))
 
     @staticmethod
     def coerce_string_to_ascii(val):
@@ -140,8 +139,7 @@ class Parser:
             return val.encode('ascii')
         elif isinstance(val, bytes):
             return val.decode('utf-8').encode('ascii')
-        else:
-            raise TypeError("Input {0} is not a string, string expected".format(val))
+        raise TypeError("Input {0} is not a string, string expected".format(val))
 
     @staticmethod
     def coerce_http_method(val):
@@ -159,8 +157,8 @@ class Parser:
         """ If single value, try to parse as integer, else try to parse as list of integer """
         if isinstance(val, list):
             return [int(x) for x in val]
-        else:
-            return [int(val)]
+
+        return [int(val)]
 
     @staticmethod
     def parse_headers(header_string):
