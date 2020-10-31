@@ -86,7 +86,7 @@ class TestSet:
     def parse(self, base_url: str, testcase_list: List, test_file=None, working_directory=None, variable_dict=None):
 
         if working_directory is None:
-            working_directory = os.path.abspath(os.getcwd())
+            working_directory = Path(os.path.abspath(os.getcwd()))
         else:
             working_directory = Path(working_directory)
         if variable_dict is None:
@@ -108,7 +108,7 @@ class TestSet:
                         raise ValueError("include should be list not %s" % type(sub_testcase_node))
                     for testcase_file_path in sub_testcase_node:
                         testcase_file_path = testcase_file_path.replace('.', '/')
-                        testcase_file = working_directory.joinpath("%s.yaml" % testcase_file_path).resolve()
+                        testcase_file = str(working_directory.joinpath("%s.yaml" % testcase_file_path).resolve())
                         if testcase_file not in self.__testcase_file:
                             self.__testcase_file.add(testcase_file)
                             import_testcase_list = read_testcase_file(testcase_file)
@@ -116,19 +116,16 @@ class TestSet:
                                 self.parse(base_url, import_testcase_list, variable_dict=variable_dict)
                 elif key == YamlKeyWords.IMPORT:
                     if sub_testcase_node not in self.__testcase_file:
-                        testcase_file_path = os.path.dirname(os.path.realpath(sub_testcase_node))
+                        testcase_file_path = sub_testcase_node
                         logger.debug("Importing testcase from %s", testcase_file_path)
+                        testcase_file_path = str(working_directory.joinpath("%s" % testcase_file_path).resolve())
                         self.__testcase_file.add(sub_testcase_node)
                         import_testcase_list = read_testcase_file(testcase_file_path)
-                        with ChangeDir(testcase_file_path):
+                        with ChangeDir(working_directory):
                             self.parse(base_url, import_testcase_list, variable_dict=variable_dict)
                 elif key == YamlKeyWords.URL:
                     __group_name = TestCaseGroup.DEFAULT_GROUP
-                    try:
-                        group_object = TestSet.test_group_list_dict[__group_name]
-                    except KeyError:
-                        group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
-                        TestSet.test_group_list_dict[__group_name] = group_object
+                    group_object = TestSet.__create_test(__group_name, testcase_config_object)
                     testcase_object = TestCase(
                         base_url=base_url, extract_binds=group_object.extract_binds,
                         variable_binds=group_object.variable_binds, context=group_object.context,
@@ -153,11 +150,7 @@ class TestSet:
             if __group_name is None:
                 __group_name = node_dict.get(TestCaseKeywords.group)
         __group_name = __group_name if __group_name else TestCaseGroup.DEFAULT_GROUP
-        try:
-            group_object = TestSet.test_group_list_dict[__group_name]
-        except KeyError:
-            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
-            TestSet.test_group_list_dict[__group_name] = group_object
+        group_object = TestSet.__create_test(__group_name, testcase_config_object)
         testcase_object = TestCase(
             base_url=base_url, extract_binds=group_object.extract_binds,
             variable_binds=group_object.variable_binds, context=group_object.context,
@@ -165,6 +158,15 @@ class TestSet:
         )
         testcase_object.parse(sub_testcase_node)
         group_object.testcase_list = testcase_object
+
+    @staticmethod
+    def __create_test(__group_name, testcase_config_object):
+        try:
+            group_object = TestSet.test_group_list_dict[__group_name]
+        except KeyError:
+            group_object = TestCaseGroup(TestCaseGroup.DEFAULT_GROUP, config=testcase_config_object)
+            TestSet.test_group_list_dict[__group_name] = group_object
+        return group_object
 
 
 class TestCaseGroup:
@@ -367,6 +369,8 @@ class TestCase:
             val = self.__url
         if not self.__abs_url:
             val = urljoin(self.__base_url, val)
+        if isinstance(val, dict):
+            logger.warning("URL is not applied template values.")
         return val
 
     @url.setter
@@ -489,8 +493,10 @@ class TestCase:
         if value:
             if isinstance(value, bytes):
                 self.__body = ContentHandler.parse_content(value.decode())
-            else:
+            elif isinstance(value, str):
                 self.__body = ContentHandler.parse_content(value)
+            else:
+                self.__body = value
         else:
             self.__body = value
 
@@ -499,7 +505,7 @@ class TestCase:
         return self.__failure_list
 
     def realize_template(self, variable_name, context):
-        if context is None or self.templates is None or variable_name not in self.templates:
+        if (context or self.templates) is None or (variable_name not in self.templates):
             return None
         if not context.get_values():
             return None

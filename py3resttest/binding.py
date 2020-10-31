@@ -10,7 +10,7 @@ logger = logging.getLogger('py3resttest')
 
 class Context(object):
     """ Manages binding of variables & generators, with both variable name and generator name being strings """
-
+    # variables = {}
     def __init__(self):
         self.variables = {}  # Maps variable name to current value
         self.generators = {}  # Maps generator name to generator function
@@ -21,6 +21,7 @@ class Context(object):
             This allows for passing in variables in testing """
         str_name = str(variable_name)
         prev = self.variables.get(str_name)
+
         if prev != variable_value:
             self.variables[str(variable_name)] = variable_value
             self.mod_count = self.mod_count + 1

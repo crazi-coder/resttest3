@@ -60,7 +60,6 @@ class AbstractExtractor(metaclass=ABCMeta):
     @abstractmethod
     def extract_internal(self, query=None, body=None, headers=None, args=None):
         """ Do extraction, query should be pre-templated """
-        pass
 
     def extract(self, body=None, headers=None, context=None):
         """ Extract data """
@@ -165,8 +164,8 @@ class HeaderExtractor(AbstractExtractor):
         # Fix #19
         if len(extracted) == 1:
             return extracted[0]
-        else:
-            return extracted
+
+        return extracted
 
     @classmethod
     def parse(cls, config):
@@ -198,9 +197,8 @@ def _get_extractor(config_dict):
     for key, value in config_dict.items():
         if key in EXTRACTORS:
             return parse_extractor(key, value)
-    else:  # No valid extractor
-        raise Exception(
-            'No valid extractor name to use in input: {0}'.format(config_dict))
+    raise Exception(
+        'No valid extractor name to use in input: {0}'.format(config_dict))
 
 
 class AbstractValidator(metaclass=ABCMeta):
@@ -218,7 +216,6 @@ class AbstractValidator(metaclass=ABCMeta):
     @abstractmethod
     def validate(self, body=None, headers=None, context=None):
         """ Run the validation function, return true or a Failure """
-        pass
 
 
 class ComparatorValidator(AbstractValidator):
@@ -322,7 +319,7 @@ class ComparatorValidator(AbstractValidator):
         # Expected value can be another extractor query, or a single value, or
         # a templated value
 
-        if isinstance(expected, str) or isinstance(expected, (int, float, complex)):
+        if isinstance(expected, (str, int, float, complex)):
             output.expected = expected
         elif isinstance(expected, dict):
 
@@ -457,13 +454,13 @@ def register_extractor(extractor_name, parse_function):
     if extractor_name.lower() == 'comparator':
         raise ValueError(
             "Cannot register extractors called 'comparator', that is a reserved name")
-    elif extractor_name.lower() == 'test':
+    if extractor_name.lower() == 'test':
         raise ValueError(
             "Cannot register extractors called 'test', that is a reserved name")
-    elif extractor_name.lower() == 'expected':
+    if extractor_name.lower() == 'expected':
         raise ValueError(
             "Cannot register extractors called 'expected', that is a reserved name")
-    elif extractor_name in EXTRACTORS:
+    if extractor_name in EXTRACTORS:
         raise ValueError(
             "Cannot register an extractor name that already exists: {0}".format(extractor_name))
     EXTRACTORS[extractor_name] = parse_function
@@ -473,7 +470,7 @@ def register_test(test_name, test_function):
     """ Register a new one-argument test function """
     if not isinstance(test_name, str):
         raise TypeError("Cannot register a non-string test name")
-    elif test_name in VALIDATOR_TESTS:
+    if test_name in VALIDATOR_TESTS:
         raise ValueError(
             "Cannot register a test name that already exists: {0}".format(test_name))
     VALIDATOR_TESTS[test_name] = test_function

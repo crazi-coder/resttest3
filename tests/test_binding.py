@@ -19,6 +19,7 @@ class BindingTest(unittest.TestCase):
         """ Test bind/return of variables """
 
         context = Context()
+        context.variables = {}
         self.assertTrue(context.get_value('foo') is None)
         self.assertEqual(0, context.mod_count)
 

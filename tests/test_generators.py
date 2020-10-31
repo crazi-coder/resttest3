@@ -3,6 +3,8 @@ import string
 import types
 import unittest
 
+import pytest
+
 from py3resttest import generators
 from py3resttest.binding import Context
 
@@ -140,6 +142,8 @@ class GeneratorTest(unittest.TestCase):
                   'values': vals}
         gen = generators.parse_generator(config)
         self.generator_basic_test(gen, lambda x: x in vals)
+        self.assertRaises(ValueError, generators.parse_generator, {'type': 'fixed_sequence', 'values': []})
+        self.assertRaises(ValueError, generators.parse_generator, {'type': 'fixed_sequence', 'values': {'x': 1}})
 
     def test_factory_choice(self):
         """ Tests linear sequences """
@@ -154,6 +158,17 @@ class GeneratorTest(unittest.TestCase):
         vals = {'a', 'b', 'c'}
         gen = generators.factory_choice_generator(vals)()
         self.generator_basic_test(gen, lambda x: x in vals)
+
+        with pytest.raises(ValueError) as e:
+            gen = generators.parse_choice_generator({'values': []})()
+
+    def test_register_generator(self):
+
+        with pytest.raises(TypeError) as e:
+            gen = generators.register_generator(1, lambda x: x)
+
+        with pytest.raises(ValueError) as e:
+            gen = generators.register_generator('env_string', lambda x: x)
 
     def test_parse_choice_generatpr(self):
         vals = ['moobie', 'moby', 'moo']
