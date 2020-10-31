@@ -93,6 +93,10 @@ class ContentHandler:
         is_file = False
         is_done = False
 
+        if not isinstance(node, (str, dict, list)):
+            raise TypeError(
+                "Content must be a string, dictionary, or list of dictionaries")
+
         while node and not is_done:  # Dive through the configuration tree
             # Finally we've found the value!
             if isinstance(node, str):
@@ -100,15 +104,12 @@ class ContentHandler:
                 output.setup(node, is_file=is_file, is_template_path=is_template_path,
                              is_template_content=is_template_content)
                 return output
-            elif not isinstance(node, dict) and not isinstance(node, list):
-                raise TypeError(
-                    "Content must be a string, dictionary, or list of dictionaries")
 
             is_done = True
 
             # Dictionary or list of dictionaries
-            flat = Parser.flatten_lowercase_keys_dict(node)
-            for key, value in flat.items():
+            flat_dict = Parser.flatten_lowercase_keys_dict(node)
+            for key, value in flat_dict.items():
                 if key == 'template':
                     if isinstance(value, str):
                         if is_file:

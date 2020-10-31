@@ -152,7 +152,7 @@ def factory_env_string(env_string):
 
 def parse_random_text_generator(configuration):
     """ Parses configuration options for a random text generator """
-    character_set = configuration.get(u'character_set')
+    character_set = configuration.get('character_set')
 
     if character_set:
         character_set = character_set.lower()
@@ -161,26 +161,21 @@ def parse_random_text_generator(configuration):
                 "Illegal character set name, is not defined: {0}".format(character_set))
         characters = CHARACTER_SETS[character_set]
     else:  # Custom characters listing, not a character set
-        characters = str(configuration.get(u'characters'))
+        characters = configuration.get('characters')
 
-    min_length = 8
-    max_length = 8
+    min_length = int(configuration.get('min_length', 8))
+    max_length = int(configuration.get('max_length', 8))
+    if not characters:
+        return factory_generate_text(min_length=min_length, max_length=max_length)()
+    characters = str(characters)
 
-    if configuration.get(u'min_length'):
-        min_length = int(configuration.get(u'min_length'))
-    if configuration.get(u'max_length'):
-        max_length = int(configuration.get(u'max_length'))
-
-    if configuration.get(u'length'):
-        length = int(configuration.get(u'length'))
+    if configuration.get('length'):
+        length = int(configuration.get('length'))
         min_length = length
         max_length = length
 
-    if characters:
-        return factory_generate_text(
-            legal_characters=characters, min_length=min_length, max_length=max_length)()
-
-    return factory_generate_text(min_length=min_length, max_length=max_length)()
+    return factory_generate_text(
+        legal_characters=characters, min_length=min_length, max_length=max_length)()
 
 
 # List of valid generator types
@@ -195,7 +190,7 @@ GENERATOR_TYPES = {'env_variable',
 GENERATOR_PARSING = {'fixed_sequence': parse_fixed_sequence}
 
 
-def register_generator(typename, parse_function):
+def register_generator(typename: str, parse_function):
     """ Register a new generator for use in testing
         typename is the new generator type name (must not already exist)
         parse_function will parse a configuration object (dict)
