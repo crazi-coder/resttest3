@@ -3,11 +3,11 @@ import unittest
 from inspect import currentframe, getframeinfo
 from pathlib import Path
 
-from py3resttest import validators
-from py3resttest.binding import Context
-from py3resttest.constants import safe_length, regex_compare
-from py3resttest.ext.validator_jsonschema import JsonSchemaValidator
-from py3resttest.validators import register_extractor, _get_extractor, register_test, register_comparator
+from resttest3 import validators
+from resttest3.binding import Context
+from resttest3.constants import safe_length, regex_compare
+from resttest3.ext.validator_jsonschema import JsonSchemaValidator
+from resttest3.validators import register_extractor, _get_extractor, register_test, register_comparator
 
 
 class ValidatorsTest(unittest.TestCase):

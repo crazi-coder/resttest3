@@ -2,7 +2,7 @@ import json
 
 import jmespath
 
-from py3resttest.validators import AbstractExtractor
+from resttest3.validators import AbstractExtractor
 
 
 class JMESPathExtractor(AbstractExtractor):

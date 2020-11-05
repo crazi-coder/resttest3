@@ -4,9 +4,9 @@ from pathlib import Path
 
 import yaml
 
-from py3resttest.binding import Context
-from py3resttest.testcase import TestCaseConfig, TestSet, TestCase
-from py3resttest.validators import MiniJsonExtractor
+from resttest3.binding import Context
+from resttest3.testcase import TestCaseConfig, TestSet, TestCase
+from resttest3.validators import MiniJsonExtractor
 
 filename = getframeinfo(currentframe()).filename
 current_module_path = Path(filename)

@@ -11,7 +11,7 @@ setup(
                      '\n Documentation at https://abhijo89-to.github.io/py3resttest/',
     author="Abhilash Joseph C",
     author_email='abhilash@softlinkweb.com',
-    url='https://github.com/abhijo89-to/py3resttest',
+    url='https://github.com/abhijo89-to/resttest3',
     keywords=['rest', 'web', 'http', 'testing', 'api'],
     classifiers=[
         'Environment :: Console',
@@ -31,9 +31,9 @@ setup(
     license='Apache License, Version 2.0',
     install_requires=install_requires,
     tests_require=install_requires,
-    test_suite="py3resttest.tests",
+    test_suite="resttest3.tests",
     entry_points={
-        'console_scripts': ['resttest3=py3resttest.runner:main'],
+        'console_scripts': ['resttest3=resttest3.runner:main'],
     }
 
 )

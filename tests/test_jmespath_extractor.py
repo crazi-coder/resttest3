@@ -1,6 +1,6 @@
 import unittest
 
-from py3resttest.ext.extractor_jmespath import JMESPathExtractor
+from resttest3.ext.extractor_jmespath import JMESPathExtractor
 
 
 class MTestJMESPathExtractor(unittest.TestCase):

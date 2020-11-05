@@ -2,7 +2,7 @@ import unittest
 
 from pytest import fail
 
-from py3resttest.utils import Parser
+from resttest3.utils import Parser
 
 
 class ParserTest(unittest.TestCase):

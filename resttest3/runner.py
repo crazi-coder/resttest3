@@ -8,10 +8,10 @@ from typing import Dict, List
 import yaml
 from alive_progress import alive_bar
 
-from py3resttest.testcase import TestSet
-from py3resttest.utils import register_extensions
+from resttest3.testcase import TestSet
+from resttest3.utils import register_extensions
 
-logger = logging.getLogger('py3resttest')
+logger = logging.getLogger('resttest3')
 logging.basicConfig(format='%(levelname)s:%(message)s')
 
 

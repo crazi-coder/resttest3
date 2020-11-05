@@ -4,8 +4,8 @@ import os
 import string
 import unittest
 
-from py3resttest.binding import Context
-from py3resttest.contenthandling import ContentHandler
+from resttest3.binding import Context
+from resttest3.contenthandling import ContentHandler
 
 
 class ContentHandlerTest(unittest.TestCase):

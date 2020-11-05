@@ -11,18 +11,18 @@ from urllib.parse import urljoin
 
 import pycurl
 
-from py3resttest.binding import Context
-from py3resttest.constants import (
+from resttest3.binding import Context
+from resttest3.constants import (
     AuthType, YamlKeyWords, TestCaseKeywords, DEFAULT_TIMEOUT, EnumHttpMethod, FAILURE_CURL_EXCEPTION,
     FAILURE_TEST_EXCEPTION, FAILURE_INVALID_RESPONSE
 )
-from py3resttest.contenthandling import ContentHandler
-from py3resttest.exception import HttpMethodError, BindError, ValidatorError
-from py3resttest.generators import parse_generator
-from py3resttest.utils import read_testcase_file, ChangeDir, Parser
-from py3resttest.validators import parse_extractor, parse_validator, Failure
+from resttest3.contenthandling import ContentHandler
+from resttest3.exception import HttpMethodError, BindError, ValidatorError
+from resttest3.generators import parse_generator
+from resttest3.utils import read_testcase_file, ChangeDir, Parser
+from resttest3.validators import parse_extractor, parse_validator, Failure
 
-logger = logging.getLogger('py3resttest')
+logger = logging.getLogger('resttest3')
 
 
 class TestCaseConfig:

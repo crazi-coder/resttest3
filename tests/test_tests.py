@@ -4,12 +4,12 @@ import unittest
 
 from pytest import fail
 
-from py3resttest import generators
-from py3resttest.binding import Context
-from py3resttest.contenthandling import ContentHandler
-from py3resttest.exception import BindError, HttpMethodError, ValidatorError
-from py3resttest.testcase import TestCase
-from py3resttest.validators import ComparatorValidator, ExtractTestValidator
+from resttest3 import generators
+from resttest3.binding import Context
+from resttest3.contenthandling import ContentHandler
+from resttest3.exception import BindError, HttpMethodError, ValidatorError
+from resttest3.testcase import TestCase
+from resttest3.validators import ComparatorValidator, ExtractTestValidator
 
 
 class TestsTest(unittest.TestCase):

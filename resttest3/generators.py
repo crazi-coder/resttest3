@@ -10,7 +10,7 @@ Example: generators that case-swap
 
 INT32_MAX_VALUE = 2147483647  # Max of 32 bit unsigned int
 
-logger = logging.getLogger('py3resttest.generators')
+logger = logging.getLogger('resttest3.generators')
 
 # Character sets to use in text generation, python string plus extras
 CHARACTER_SETS = {
@@ -213,7 +213,7 @@ def parse_generator(configuration):
     """ Parses a configuration built from yaml and returns a generator
         Configuration should be a map
     """
-    from py3resttest.utils import Parser
+    from resttest3.utils import Parser
     configuration = Parser.lowercase_keys(Parser.flatten_dictionaries(configuration))
     gen_type = str(configuration.get(u'type')).lower()
 

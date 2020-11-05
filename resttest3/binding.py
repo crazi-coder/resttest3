@@ -5,11 +5,12 @@ import types
 Basic context implementation for binding variables to values
 """
 
-logger = logging.getLogger('py3resttest')
+logger = logging.getLogger('resttest3')
 
 
-class Context(object):
+class Context:
     """ Manages binding of variables & generators, with both variable name and generator name being strings """
+
     # variables = {}
     def __init__(self):
         self.variables = {}  # Maps variable name to current value

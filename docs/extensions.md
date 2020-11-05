@@ -22,7 +22,7 @@ python pyresttest/resttest.py https://api.github.com fancypants_test.yaml --impo
 
 ## What does an extension look like?
 ```python
-import py3resttest.validators as validators
+import resttest3.validators as validators
 
 # Define a simple generator that doubles with each value
 def parse_generator_doubling(config):
@@ -43,11 +43,6 @@ GENERATORS = {'doubling': parse_generator_doubling}
 ```
 
 If this is imported when executing the test, you can now use this generator in tests. 
-
-# Full Example
-See the [sample extension](pyresttest/tests/sample_extension.py).  
-It shows an extension for all extensible functions. 
-
 
 # What Doe An Extension Need To Work?
 
@@ -105,6 +100,8 @@ The 'parse' function below will be registered in the registry.
 
 Example:
 ```python
+
+from resttest3.validators import AbstractExtractor
 class HeaderExtractor(AbstractExtractor):
     """ Extractor that pulls out a named header """
     extractor_type = 'header'  # Printable name for the type
@@ -133,6 +130,9 @@ Validators should extend AbstractValidator.
 The parse function below will be registered in the registry VALIDATORS. 
 
 ```python
+from resttest3.validators import AbstractValidator, _get_extractor, Failure
+from resttest3.utils import  Parser
+from resttest3.constants import  VALIDATOR_TESTS
 class ExtractTestValidator(AbstractValidator):
     """ Does extract and test from request body """
     name = 'ExtractTestValidator'
@@ -145,7 +145,7 @@ class ExtractTestValidator(AbstractValidator):
     def parse(config):
         """ Config is a dict """
         output = ExtractTestValidator()
-        config = parsing.lowercase_keys(parsing.flatten_dictionaries(config))
+        config = Parser.flatten_lowercase_keys_dict(config)
         output.config = config
         extractor = _get_extractor(config)
         output.extractor = extractor

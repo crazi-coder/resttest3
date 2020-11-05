@@ -6,9 +6,9 @@ import traceback
 from abc import abstractmethod, ABCMeta
 from typing import Dict, List, Union, Optional
 
-from py3resttest.constants import COMPARATORS, FAILURE_EXTRACTOR_EXCEPTION, FAILURE_VALIDATOR_FAILED, VALIDATOR_TESTS
+from resttest3.constants import COMPARATORS, FAILURE_EXTRACTOR_EXCEPTION, FAILURE_VALIDATOR_FAILED, VALIDATOR_TESTS
 
-logger = logging.getLogger('py3resttest.validators')
+logger = logging.getLogger('resttest3.validators')
 
 EXTRACTORS = {}
 VALIDATORS = {}
@@ -287,7 +287,7 @@ class ComparatorValidator(AbstractValidator):
                 expected: 'myValue'
               }
         """
-        from py3resttest.utils import Parser
+        from resttest3.utils import Parser
         output = ComparatorValidator()
         config = Parser.lowercase_keys(Parser.flatten_dictionaries(config))
         output.config = config
@@ -354,7 +354,7 @@ class ExtractTestValidator(AbstractValidator):
 
     @staticmethod
     def parse(config):
-        from py3resttest.utils import Parser
+        from resttest3.utils import Parser
         output = ExtractTestValidator()
         config = Parser.lowercase_keys(Parser.flatten_dictionaries(config))
         output.config = config

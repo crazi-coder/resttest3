@@ -1,7 +1,7 @@
 import os
 import string
 
-from py3resttest.utils import Parser
+from resttest3.utils import Parser
 
 """
 Encapsulates contend handling logic, for pulling file content into tests
