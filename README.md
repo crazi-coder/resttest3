@@ -4,7 +4,7 @@ py3resttest
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/resttest3)
 ![PyPI - Wheel](https://img.shields.io/pypi/wheel/resttest3)
 ![PyPI](https://img.shields.io/pypi/v/resttest3)
-![PyPI - Downloads](https://img.shields.io/pypi/dm/resttest3)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/resttest3)](https://pypistats.org/packages/resttest3)
 [![Coverage Status](https://coveralls.io/repos/github/abhijo89-to/resttest3/badge.svg)](https://coveralls.io/github/abhijo89-to/resttest3)
 [![SourceLevel](https://app.sourcelevel.io/github/abhijo89-to/py3resttest.svg)](https://app.sourcelevel.io/github/abhijo89-to/py3resttest)
 [![CodeFactor](https://www.codefactor.io/repository/github/abhijo89-to/resttest3/badge)](https://www.codefactor.io/repository/github/abhijo89-to/resttest3)
