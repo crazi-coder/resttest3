@@ -6,7 +6,7 @@ py3resttest
 ![PyPI](https://img.shields.io/pypi/v/resttest3)
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/resttest3)](https://pypistats.org/packages/resttest3)
 [![Coverage Status](https://coveralls.io/repos/github/abhijo89-to/resttest3/badge.svg)](https://coveralls.io/github/abhijo89-to/resttest3)
-[![SourceLevel](https://app.sourcelevel.io/github/abhijo89-to/py3resttest.svg)](https://app.sourcelevel.io/github/abhijo89-to/py3resttest)
+[![SourceLevel](https://app.sourcelevel.io/github/crazi-coder/resttest3.svg)](https://app.sourcelevel.io/github/crazi-coder/resttest3)
 [![CodeFactor](https://www.codefactor.io/repository/github/crazi-coder/resttest3/badge)](https://www.codefactor.io/repository/github/abhijo89-to/resttest3)
 
 
