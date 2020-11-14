@@ -1,3 +1,4 @@
+"""JMESPathExtractor file"""
 import json
 
 import jmespath
@@ -12,18 +13,19 @@ class JMESPathExtractor(AbstractExtractor):
     extractor_type = 'jmespath'
     is_body_extractor = True
 
-    def extract_internal(self, query=None, args=None, body=None, headers=None):
+    def extract_internal(self, query=None, body=None, headers=None, args=None):
         if isinstance(body, bytes):
             body = body.decode('utf-8')
 
         try:
             res = jmespath.search(query, json.loads(body))
             return res
-        except Exception as e:
-            raise ValueError("Invalid query: " + query + " : " + str(e))
+        except Exception as Exe:
+            raise ValueError("Invalid query: " + query + " : " + str(Exe)) from Exe
 
     @classmethod
     def parse(cls, config):
+        """Parse the JMESPathExtractor config dict"""
         base = JMESPathExtractor()
         return cls.configure_base(config, base)
 

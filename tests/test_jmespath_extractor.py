@@ -12,8 +12,8 @@ class MTestJMESPathExtractor(unittest.TestCase):
         unicoded_body = '{"test":"指事字"}'
         b = bytes('{"test":23}', 'utf-8')
 
-        self.ext.extract_internal('test', None, unicoded_body)
-        data = self.ext.extract_internal('test', None, b)
+        self.ext.extract_internal('test', unicoded_body, None)
+        data = self.ext.extract_internal('test', b)
         self.assertEqual(data, 23)
         self.assertRaises(ValueError, self.ext.extract_internal, 'test', None, 'abc')
 
