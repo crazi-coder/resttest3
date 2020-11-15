@@ -1,5 +1,4 @@
 FROM python:3.5-alpine
-MAINTAINER Abhilash Joseph C. <abhilash@softlinkweb.com>
 # Install packages
 RUN apk add --no-cache libcurl
 
