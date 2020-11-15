@@ -2,13 +2,14 @@ from setuptools import setup, find_packages
 with open("requirements.txt") as fp:
     install_requires = [lib_str.strip() for lib_str in fp.read().split("\n") if not lib_str.startswith("#")]
 
+with open('README.md') as fp:
+    readme = fp.read()
 
 setup(
     name='resttest3',
-    version="1.0.1",
+    version="1.0.3",
     description='Python RESTful API Testing & Micro benchmarking Tool',
-    long_description='Python RESTful API Testing & Microbenchmarking Tool '
-                     '\n Documentation at https://abhijo89-to.github.io/py3resttest/',
+    long_description=readme,
     author="Abhilash Joseph C",
     author_email='abhilash@softlinkweb.com',
     url='https://github.com/abhijo89-to/resttest3',
