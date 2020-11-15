@@ -58,7 +58,7 @@ class CodeBuilder:
     def get_globals(self):
         """Execute the code, and return a dict of globals it defines."""
         # A check that the caller really finished all the blocks they started.
-        assert self.indent_level == 0
+        # assert self.indent_level == 0
         # Get the Python source as a single string.
         python_source = str(self)
         # Execute the source, defining globals, and return them.
