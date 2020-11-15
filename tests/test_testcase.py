@@ -2,6 +2,7 @@ import unittest
 from inspect import getframeinfo, currentframe
 from pathlib import Path
 
+import pycurl
 import yaml
 
 from resttest3.binding import Context
@@ -139,6 +140,20 @@ class TestTestCase(unittest.TestCase):
             self.assertEqual(1, len(ts.test_group_list_dict))
             ts.parse('', [{'import': 'tests/content-test.yaml'}])
             self.assertEqual(1, len(ts.test_group_list_dict))
+
+    def test_pycurl_run(self):
+        x = TestCase('https://api.github.com', None, None, None, None)
+        x.run()
+        self.assertEqual(True, x.is_passed)
+        x.ssl_insecure = True
+        x.run()
+        self.assertEqual(True, x.is_passed)
+        curl_handler = pycurl.Curl()
+        x.run(curl_handler=curl_handler)
+        self.assertEqual(True, x.is_passed)
+        curl_handler.close()
+        x.run(curl_handler=curl_handler)
+        self.assertEqual(True, x.is_passed)
 
 
 if __name__ == '__main__':

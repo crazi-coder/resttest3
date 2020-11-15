@@ -4,3 +4,4 @@ pycurl==7.43.0.6
 jsonpath==0.82
 jmespath==0.10.0
 jsonschema==3.2.0
+certifi>=2020.11.8
