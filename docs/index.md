@@ -31,14 +31,14 @@ This is a clone of pyresttest to support py3 and optimized lot of functionality.
 # What Is It?
 - A REST testing and API microbenchmarking tool
 - Tests are defined in basic YAML or JSON config files, no code needed
-- Minimal dependencies (pycurl, pyyaml, optionally future), making it easy to deploy on-server for smoketests/healthchecks
+- Minimal dependencies (pycurl, pyyaml), making it easy to deploy on-server for smoketests/healthchecks
 - Supports [generate/extract/validate](advanced_guide.md) mechanisms to create full test scenarios with workflow
 - Returns exit codes on failure, to slot into automated configuration management/orchestration tools (also supplies parseable logs)
 - Logic is written and [extensible](extensions.md) in Python
 
 # Status
 
-**Full Python 3.5+ Support** 
+**Python 3.5+ Support** 
  
 Apache License, Version 2.0
 
@@ -58,7 +58,7 @@ Works on Linux or Mac with Python 3.5+
 *This is needed because the pycurl dependency may fail to install by pip. 
 
 **It is easy to install the latest release by pip:**
-(sudo) `pip install resttest`
+(sudo) `pip install resttest3`
 
 **If pip isn't installed, we'll want to install it first:**
 If that is not installed, we'll need to install it first:
