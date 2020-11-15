@@ -9,11 +9,11 @@ from typing import Dict, Union, List, Any
 
 import yaml
 
-from py3resttest.generators import register_generator
-from py3resttest.validators import register_test, register_comparator, register_extractor
-from py3resttest.validators import register_validator
+from resttest3.generators import register_generator
+from resttest3.validators import register_test, register_comparator, register_extractor
+from resttest3.validators import register_validator
 
-logger = logging.getLogger('py3resttest')
+logger = logging.getLogger('resttest3')
 
 
 class ChangeDir:

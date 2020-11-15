@@ -1,6 +1,6 @@
 import unittest
 
-from py3resttest.binding import Context
+from resttest3.binding import Context
 
 
 def count_gen():  # Generator that counts up from 1

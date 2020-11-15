@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from py3resttest.utils import ChangeDir, read_testcase_file, Parser
+from resttest3.utils import ChangeDir, read_testcase_file, Parser
 
 filename = getframeinfo(currentframe()).filename
 current_module_path = Path(filename)

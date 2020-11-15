@@ -5,8 +5,8 @@ import unittest
 
 import pytest
 
-from py3resttest import generators
-from py3resttest.binding import Context
+from resttest3 import generators
+from resttest3.binding import Context
 
 
 class GeneratorTest(unittest.TestCase):

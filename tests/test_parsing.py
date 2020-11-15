@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from py3resttest.utils import Parser
+from resttest3.utils import Parser
 
 
 class TestParsing(unittest.TestCase):
