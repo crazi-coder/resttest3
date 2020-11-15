@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 from urllib.parse import urljoin
 
+import certifi
 import pycurl
 
 from resttest3.binding import Context
@@ -616,6 +617,7 @@ class TestCase:
                 curl_handler.setopt(curl_handler.COOKIELIST, "ALL")
             except pycurl.error:
                 curl_handler = pycurl.Curl()
+                curl_handler.setopt(pycurl.CAINFO, certifi.where())  # Fix for #29
         else:
             curl_handler = pycurl.Curl()
 
