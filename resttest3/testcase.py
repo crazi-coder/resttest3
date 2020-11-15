@@ -333,6 +333,14 @@ class TestCase:
         self.__auth_username = Parser.coerce_string_to_ascii(username)
 
     @property
+    def ssl_insecure(self):
+        return self.__ssl_insecure
+
+    @ssl_insecure.setter
+    def ssl_insecure(self, val):
+        self.__ssl_insecure = bool(val)
+
+    @property
     def auth_password(self):
         return self.__auth_password
 
@@ -618,6 +626,7 @@ class TestCase:
             except pycurl.error:
                 curl_handler = pycurl.Curl()
                 curl_handler.setopt(pycurl.CAINFO, certifi.where())  # Fix for #29
+                curl_handler.setopt(pycurl.FOLLOWLOCATION, 1)  # Support for HTTP 301
         else:
             curl_handler = pycurl.Curl()
 
