@@ -190,8 +190,8 @@ class Templite:
                     words = token[start:end].strip().split()
                     if words[0] == 'if':
                         # An if statement: evaluate the expression to determine if.
-                        if len(words) != 2:
-                            self._syntax_error("Don't understand if", token)
+                        # if len(words) != 2:
+                        #     self._syntax_error("Don't understand if", token)
                         ops_stack.append('if')
                         code.add_line("if %s:" % self._expr_code(words[1]))
                         code.indent()

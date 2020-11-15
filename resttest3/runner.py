@@ -1,7 +1,9 @@
+import datetime
 import logging
 import os
 import sys
 from argparse import ArgumentParser
+from inspect import getframeinfo, currentframe
 from pathlib import Path
 from typing import Dict, List
 
@@ -13,6 +15,9 @@ from resttest3.utils import register_extensions
 
 logger = logging.getLogger('resttest3')
 logging.basicConfig(format='%(levelname)s:%(message)s')
+
+filename = getframeinfo(currentframe()).filename
+current_module_path = Path(filename)
 
 
 class ArgsRunner:
@@ -28,6 +33,7 @@ class ArgsRunner:
         self.insecure = None
         self.absolute_urls = None
         self.skip_term_colors = None
+        self.html = 'html'
 
     def args(self):
         parser = ArgumentParser(description='usage: %prog base_url test_filename.yaml [options]')
@@ -37,6 +43,7 @@ class ArgsRunner:
         parser.add_argument("--url", help="Base URL to run tests against", action="store", type=str, required=True)
         parser.add_argument("--test", help="Test file to use", action="store", type=str, required=True)
         # parser.add_argument('--vars', help='Variables to set, as a YAML dictionary', action="store", type=str)
+        parser.add_argument('--html', help='Generate HTML Report', action="store")
         # parser.add_argument(u'--insecure', help='Disable cURL host and peer cert verification', action='store_true',
         #                     default=False)
         # parser.add_argument(u'--absolute_urls', help='Enable absolute URLs in tests instead of relative paths',
@@ -81,7 +88,9 @@ class Runner:
 
         success_dict = {}
         failure_dict = {}
+        context_list = []
         total_testcase_count = len([y for x, y in testcase_set.test_group_list_dict.items() for c in y.testcase_list])
+        stat_time = datetime.datetime.now()
         with alive_bar(total_testcase_count) as bar:
             for test_group, test_group_object in testcase_set.test_group_list_dict.items():
                 for testcase_object in test_group_object.testcase_list:
@@ -101,6 +110,26 @@ class Runner:
                             failure_dict[test_group] = (count + 1, case_list)
                         except KeyError:
                             failure_dict[test_group] = (1, [testcase_object])
+                    context_list.append(testcase_object)
+        end_time = datetime.datetime.now()
+        if self.__args.html:
+            with open(current_module_path.parent.joinpath('reports/template/report_template.html').absolute()) as f:
+                html = f.read()
+                from resttest3.reports.templite import Templite
+                _engine = Templite(html)
+                _context = {
+                    'total_testcase_count': total_testcase_count,
+                    'stat_time': stat_time,
+                    'elapsed': divmod((end_time - stat_time).total_seconds(), 60),
+                    'context_list': context_list,
+                }
+                html = _engine.render(_context)
+            path = Path(os.getcwd()).joinpath(self.__args.html)
+            if not os.path.isdir(path):
+                os.makedirs(path)
+            with open(Path(os.getcwd()).joinpath(self.__args.html).joinpath('report.html'), 'w') as f:
+                f.write(html)
+
         print("========== TEST RESULT ===========")
         print("Total Test to run: %s" % total_testcase_count)
         for group_name, case_list_tuple in failure_dict.items():
@@ -108,7 +137,7 @@ class Runner:
             count, courtcase_list = case_list_tuple
             print('%sTotal testcase failed: %s %s' % (self.FAIL, count, self.NOCOL))
             for index, testcase in enumerate(courtcase_list):
-                print('\t%s %s. Case Name: %s %s' % (self.FAIL, index+1, testcase.name, self.NOCOL))
+                print('\t%s %s. Case Name: %s %s' % (self.FAIL, index + 1, testcase.name, self.NOCOL))
                 for f in testcase.failures:
                     print('\t\t%s %s %s' % (self.FAIL, f, self.NOCOL))
 
