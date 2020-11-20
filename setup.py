@@ -7,7 +7,7 @@ with open('README.md') as fp:
 
 setup(
     name='resttest3',
-    version="1.0.3",
+    version="1.0.4",
     description='Python RESTful API Testing & Micro benchmarking Tool',
     long_description=readme,
     author="Abhilash Joseph C",
