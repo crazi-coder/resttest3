@@ -32,6 +32,8 @@ setup(
     license='Apache License, Version 2.0',
     install_requires=install_requires,
     tests_require=install_requires,
+    include_package_data=True,
+    package_data={'report': ['reports/template/*.html']},
     test_suite="resttest3.tests",
     entry_points={
         'console_scripts': ['resttest3=resttest3.runner:main'],

@@ -28,7 +28,7 @@ class JsonSchemaValidator(AbstractValidator):
         except jsonschema.exceptions.ValidationError:
             return self.__failed("JSON Schema Validation Failed")
         except json.decoder.JSONDecodeError:
-            trace = traceback.format_exc()
+            # trace = traceback.format_exc()
             return self.__failed("Invalid response json body")
 
     def __failed(self, message):
