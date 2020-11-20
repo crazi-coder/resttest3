@@ -1,4 +1,4 @@
-FROM python:3.5-alpine
+FROM python:3.7-alpine
 # Install packages
 RUN apk add --no-cache libcurl
 
@@ -24,5 +24,5 @@ RUN flake8 resttest3 --count --exit-zero --max-complexity=30 --max-line-length=1
 # RUN python -m pytest tests
 RUN coverage run --source resttest3 -m pytest tests/test_*.py
 RUN coverage report
-#RUN resttest3 --url https://www.courtlistener.com --test tests/fun_test.yaml
+RUN resttest3 --url https://www.courtlistener.com --test tests/fun_test.yaml
 
