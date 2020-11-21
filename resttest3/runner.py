@@ -82,7 +82,7 @@ class Runner:
             register_extensions(self.__args.extensions)
         p = Path(self.__args.test)
 
-        test_case_dict = self.read_test_file(p.absolute())
+        test_case_dict = self.read_test_file(str(p.absolute()))
         testcase_set = TestSet()
         testcase_set.parse(self.__args.url, testcase_list=test_case_dict, working_directory=p.parent.absolute())
 
