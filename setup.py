@@ -7,7 +7,7 @@ with open('README.md') as fp:
 
 setup(
     name='resttest3',
-    version="1.0.3",
+    version="1.0.4",
     description='Python RESTful API Testing & Micro benchmarking Tool',
     long_description=readme,
     author="Abhilash Joseph C",
@@ -32,6 +32,8 @@ setup(
     license='Apache License, Version 2.0',
     install_requires=install_requires,
     tests_require=install_requires,
+    include_package_data=True,
+    package_data={'report': ['reports/template/*.html']},
     test_suite="resttest3.tests",
     entry_points={
         'console_scripts': ['resttest3=resttest3.runner:main'],

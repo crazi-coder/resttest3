@@ -5,6 +5,7 @@ import types
 
 logger = logging.getLogger('resttest3')
 
+
 class Context:
     """ Manages binding of variables & generators, with both variable name and generator name being strings """
 
