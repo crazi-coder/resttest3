@@ -380,7 +380,9 @@ class TestCase:
             val = urljoin(self.__base_url, val)
         if isinstance(val, dict):
             logger.warning("URL is not applied template values.")
-        return quote_plus(val, safe='//:.?=&')  # Fix #36
+        if isinstance(val, (str, bytes)):
+            return quote_plus(bytes(val, encoding='utf-8'), safe='//:.?=&')  # Fix #36
+        return val
 
     @url.setter
     def url(self, value):
