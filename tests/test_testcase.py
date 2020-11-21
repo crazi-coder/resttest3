@@ -154,6 +154,8 @@ class TestTestCase(unittest.TestCase):
         curl_handler.close()
         x.run(curl_handler=curl_handler)
         self.assertEqual(True, x.is_passed)
+        x.url = "http://api.github.com/v1/search/?q=Abhilash Joseph C&"
+        self.assertEqual(x.url, "http://api.github.com/v1/search/?q=Abhilash+Joseph+C&")
 
 
 if __name__ == '__main__':

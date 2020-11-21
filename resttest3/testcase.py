@@ -7,7 +7,7 @@ import traceback
 from io import BytesIO
 from pathlib import Path
 from typing import List, Dict, Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, quote_plus
 
 import certifi
 import pycurl
@@ -380,6 +380,8 @@ class TestCase:
             val = urljoin(self.__base_url, val)
         if isinstance(val, dict):
             logger.warning("URL is not applied template values.")
+        if isinstance(val, (str, bytes)):
+            return quote_plus(bytes(val, encoding='utf-8'), safe='//:.?=&')  # Fix #36
         return val
 
     @url.setter
