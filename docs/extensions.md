@@ -44,7 +44,7 @@ GENERATORS = {'doubling': parse_generator_doubling}
 
 If this is imported when executing the test, you can now use this generator in tests. 
 
-# What Doe An Extension Need To Work?
+# What Does An Extension Need To Work?
 
 1. Function(s) to run 
 2. Registry Entries: these are special ALLCAPS variables binding extension names
